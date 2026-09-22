@@ -51,14 +51,14 @@ def install_runtime() -> str:
 
     if backend == "mlx":
         installer = repo / "optimized" / "mlx" / "install.sh"
-        subprocess.run(["bash", str(installer)], cwd=installer.parent, check=True)
+        subprocess.run(["bash", str(installer), "-y", "--download", "medium"], cwd=installer.parent, check=True)
         return backend
 
     tflite_dir = repo / "optimized" / "tflite"
     if platform.system() == "Windows":
-        subprocess.run(["cmd", "/c", "install.bat"], cwd=tflite_dir, check=True)
+        subprocess.run(["cmd", "/c", "install.bat", "--download", "medium"], cwd=tflite_dir, check=True)
     else:
-        subprocess.run(["bash", "install.sh"], cwd=tflite_dir, check=True)
+        subprocess.run(["bash", "install.sh", "-y", "--download", "medium"], cwd=tflite_dir, check=True)
     return backend
 
 
