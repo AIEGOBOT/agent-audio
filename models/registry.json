@@ -1,0 +1,41 @@
+{
+  "default": "stable-audio-3-medium",
+  "models": {
+    "stable-audio-3-medium": {
+      "provider": "stability-ai",
+      "upstream_id": "medium",
+      "capabilities": [
+        "text-to-audio",
+        "music",
+        "sound-effects",
+        "ambience",
+        "audio-to-audio",
+        "inpainting",
+        "continuation"
+      ],
+      "max_seconds": 380,
+      "backends": {
+        "mlx": {
+          "status": "supported",
+          "platform": "macOS Apple Silicon",
+          "source": "official optimized/mlx runtime"
+        },
+        "tflite": {
+          "status": "supported",
+          "platform": "Windows/macOS/Linux x86 and ARM CPU",
+          "source": "official optimized/tflite runtime"
+        },
+        "cuda": {
+          "status": "planned-validation",
+          "platform": "NVIDIA",
+          "note": "Core upstream Python path requires CUDA and Flash Attention support for Medium. Do not auto-select until installer validation is added."
+        },
+        "xpu": {
+          "status": "experimental-not-enabled",
+          "platform": "Intel GPU",
+          "note": "No acceleration claim is made in v0.1. Intel systems remain supported via the CPU fallback."
+        }
+      }
+    }
+  }
+}
