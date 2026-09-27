@@ -1,72 +1,35 @@
-# Security boundaries
+# 보안 안내
 
-Agent Audio is a local stdio MCP server. Run it with your own user account and
-only grant it output directories you intend it to write to. It is not a sandbox
-for untrusted clients or other programs running under the same account.
+Agent Audio는 로컬에서 동작하는 stdio MCP 서버입니다. 자신의 사용자 계정으로 실행하고, 출력을 저장하려는 디렉터리만 허용하세요. 신뢰할 수 없는 클라이언트나 같은 계정의 다른 프로그램을 격리하는 샌드박스는 아닙니다.
 
-## Installer behavior
+## 설치기의 동작
 
-- Existing Skills are reused only when their files match. Conflicting Skills,
-  linked destinations and mismatched MCP registrations are preserved and reported.
-- Codex and Claude native registration commands run with temporary, empty
-  configuration directories. Only the generated Agent Audio entry is merged into
-  the real config. Codex's unrelated bytes/comments are retained; JSON clients
-  retain unrelated values. The installer does not run MCP list or connect to
-  existing servers.
-- Each config edit has a unique backup, a cooperating-writer lock and an atomic
-  replacement. A concurrently changed file is refused before replacement. An
-  unrelated external editor does not share this lock; avoid editing the same file
-  during installation. Backup files may contain credentials: keep them private.
-- Custom AGENT_AUDIO_HOME is persisted in new MCP registrations. Set this variable
-  to a new directory to isolate a conflicting runtime; the installer never removes
-  a conflicting checkout or recreates an existing virtual environment.
-- Existing legacy registrations without Python's `-I` flag are reported as
-  conflicts. Review and remove just that old Agent Audio entry before re-registering.
+- 기존 Skill은 파일 내용이 일치할 때만 그대로 사용합니다. 충돌하는 Skill, 링크로 연결된 설치 대상, 다른 설치를 가리키는 MCP 등록은 보존하고 충돌을 보고합니다.
+- Codex·Claude의 기본 등록 명령은 빈 임시 설정 디렉터리에서 실행합니다. 생성된 Agent Audio 항목만 실제 설정에 병합합니다. Codex의 관련 없는 바이트·주석과 JSON 클라이언트의 다른 값은 유지합니다. 설치기는 MCP 목록 명령으로 기존 서버에 연결하지 않습니다.
+- 설정 변경마다 고유 백업을 만들고, Agent Audio 작업끼리 공유하는 잠금과 원자적 파일 교체를 사용합니다. 교체 전에 내용이 달라졌으면 변경을 거부합니다. 외부 편집기는 이 잠금을 공유하지 않으므로 설치 중 같은 설정 파일을 동시에 편집하지 마세요. 백업에는 인증 정보가 포함될 수 있으니 비공개로 보관하세요.
+- 사용자 지정 `AGENT_AUDIO_HOME`은 새 MCP 등록에 저장합니다. 런타임이 충돌하면 이 변수를 새 디렉터리로 지정해 분리하세요. 설치기는 충돌하는 체크아웃을 제거하거나 기존 가상환경을 다시 만들지 않습니다.
+- Python `-I` 옵션이 없는 구형 MCP 등록도 충돌로 보고합니다. 내용을 검토한 뒤 이전 Agent Audio 항목만 제거하고 다시 등록하세요. 관련 없는 항목을 함께 지우지 마세요.
 
-## Runtime and models
+## 런타임과 모델
 
-The official Stable Audio runtime is pinned to a tested Git commit. Before
-installation or inference, its origin, HEAD and tracked files are checked.
-An arbitrary folder with a README is never considered an executable runtime.
-This is a provenance check, not protection against a malicious local account
-that can rewrite Git metadata, dependencies or the server itself.
+공식 Stable Audio 런타임은 검증한 Git 커밋으로 고정합니다. 설치 또는 추론 전에 origin, HEAD, 추적 파일의 변경 여부를 검사합니다. README 파일만 있는 임의 폴더를 실행 가능한 런타임으로 인정하지 않습니다. 이 검사는 출처 확인을 위한 것으로, Git 메타데이터·의존성·서버 자체를 수정할 수 있는 악성 로컬 계정까지 방어하지는 않습니다.
 
-Model downloads use an immutable Hugging Face revision in Agent Audio's private
-cache. TFLite files additionally have pinned SHA-256 checksums; MLX downloads are
-revision-pinned but have not had equivalent local hardware validation. Licenses
-and gated-model access remain user responsibilities; no acceptance is automated.
+모델은 변경되지 않는 Hugging Face revision에서 Agent Audio 전용 캐시로 받습니다. TFLite 파일은 고정 SHA-256으로도 검증합니다. MLX 다운로드도 revision을 고정하지만, 이 프로젝트의 Windows 설치 검증과 동등한 실제 Apple 하드웨어 검증은 아직 수행하지 않았습니다. 라이선스와 접근 제한 모델의 사용 권한은 사용자가 직접 확인해야 하며, 약관 동의를 자동 처리하지 않습니다.
 
-Both runtimes use dedicated Python virtual environments and isolated Python
-launches. Inherited Python import paths and common virtual-environment selectors
-are removed. Generation is offline and never silently downloads new model
-revisions. Explicit HF credentials and network proxy settings remain available
-to the installation process; no tokens are copied from other model caches.
+두 런타임 모두 전용 Python 가상환경과 격리 실행 옵션을 사용합니다. 상속된 Python 모듈 검색 경로와 일반적인 가상환경 선택 환경변수는 제거합니다. 생성은 오프라인으로 수행하며 새 모델 revision을 몰래 내려받지 않습니다. 설치 시 명시적으로 지정된 Hugging Face 인증 정보와 네트워크 프록시 설정은 사용할 수 있지만, 다른 모델 캐시에서 토큰을 복사하지는 않습니다.
 
-The upstream Python dependency requirements remain version ranges, so full
-runtime dependency reproducibility is not yet guaranteed. The MCP application
-itself is locked by uv.lock. Updating either runtime or model pins requires a
-fresh installation and generation test; do not bypass conflicts by resetting an
-existing user directory.
+업스트림 Python 의존성에는 버전 범위가 남아 있어 전체 오디오 런타임의 완전한 재현성을 보장하지 않습니다. MCP 애플리케이션 의존성은 `uv.lock`으로 고정합니다. 런타임이나 모델의 고정 버전을 바꿀 때는 새 설치와 실제 생성 테스트가 필요합니다. 기존 사용자 디렉터리를 초기화해 충돌을 우회하지 마세요.
 
-## Generation
+## 오디오 생성
 
-Prompts are passed as arguments to a Python executable, never through a shell.
-stdin is disconnected and diagnostic stdout is sent to stderr to protect the
-MCP JSON-RPC channel. Inference is serialized to protect native caches/memory,
-with a 540-second process-tree timeout (Codex's new entry gets 600 seconds).
-Long CPU generations can hit that limit; they fail rather than returning a stale
-file. An interrupted application can leave a lock file; check that its recorded
-PID has exited before manually removing that lock.
+프롬프트는 셸을 거치지 않고 Python 실행 파일의 인자로 전달합니다. stdin을 차단하고 진단용 stdout을 stderr로 보내 MCP JSON-RPC 채널을 보호합니다. 네이티브 캐시와 메모리의 충돌을 줄이기 위해 추론은 한 번에 하나씩 실행하며, 프로세스 트리 전체에 540초 제한을 적용합니다. 새 Codex 항목에는 600초 도구 제한시간을 설정합니다.
 
-Outputs must be WAV files. Each run stages and validates a complete WAV before
-publishing it with a same-volume hardlink. The destination must not exist, and
-the filesystem must support hardlinks. Default names are unique. Neither an
-existing file nor a symlink is overwritten; failed renders are cleaned up.
+긴 CPU 생성은 제한시간에 도달할 수 있습니다. 이때 이전 파일을 성공 결과로 돌려주지 않고 실패를 보고합니다. 애플리케이션이 중단되면 잠금 파일이 남을 수 있으므로, 기록된 PID가 종료되었는지 확인한 뒤에만 수동으로 제거하세요.
 
-## Reporting
+출력은 WAV여야 합니다. 매 실행은 임시 경로에서 완전한 WAV를 생성·검증한 다음 같은 볼륨의 하드링크로 최종 경로에 게시합니다. 최종 경로는 존재하지 않아야 하고 파일시스템은 하드링크를 지원해야 합니다. 기본 파일명은 고유하게 생성합니다. 기존 파일이나 심볼릭 링크는 덮어쓰지 않으며 실패한 생성의 임시 파일은 정리합니다.
 
-Use the repository's GitHub private vulnerability reporting channel if enabled.
-Do not include tokens, personal configuration files or model weights in public
-issues. CI checks Python code, model-free tests on Windows/macOS/Linux, the
-application dependency lock, and CodeQL. These checks do not establish that
-third-party model weights or all native libraries are free of vulnerabilities.
+## 취약점 제보와 검사 범위
+
+저장소의 GitHub 비공개 취약점 제보 기능이 활성화되어 있으면 해당 경로를 이용하세요. 공개 이슈에 토큰, 개인 설정 파일, 모델 가중치를 포함하지 마세요.
+
+CI에서는 Python 코드, Windows·macOS·Linux의 모델 없는 테스트, 잠긴 애플리케이션 의존성, CodeQL을 검사합니다. 검사 통과가 제3자 모델 가중치와 모든 네이티브 라이브러리에 취약점이 없다는 보증은 아닙니다.
