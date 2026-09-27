@@ -15,7 +15,9 @@ def main() -> None:
     sub.add_parser("install-runtime", help="Install the selected Stable Audio runtime")
     sub.add_parser("register", help="Register MCP + Skill with detected agents")
 
-    install = sub.add_parser("install", help="Install runtime and register detected agents")
+    install = sub.add_parser(
+        "install", help="Install runtime and register detected agents"
+    )
     install.add_argument("--no-runtime", action="store_true")
     install.add_argument("--no-register", action="store_true")
 
@@ -33,7 +35,9 @@ def main() -> None:
     elif args.command == "register":
         result = register_agents()
     elif args.command == "install":
-        result = perform_install(runtime=not args.no_runtime, register=not args.no_register)
+        result = perform_install(
+            runtime=not args.no_runtime, register=not args.no_register
+        )
     else:
         result = {
             "output": str(

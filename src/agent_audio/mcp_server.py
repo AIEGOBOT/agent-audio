@@ -5,7 +5,8 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 from .detect import detect_environment, recommended_backend
-from .runtime import backend_ready, generate_audio as _generate_audio, runtime_paths
+from .runtime import backend_ready, runtime_details, runtime_paths
+from .runtime import generate_audio as _generate_audio
 
 mcp = FastMCP("agent-audio")
 
@@ -20,6 +21,7 @@ def audio_status() -> dict[str, object]:
         "selected_backend": backend,
         "runtime_ready": backend_ready(backend),
         "runtime_root": str(runtime_paths().upstream),
+        **runtime_details(backend),
         "notes": {
             "nvidia": "Detected NVIDIA hardware is reported, but v0.1 uses the portable backend unless a validated accelerated adapter is installed.",
             "intel": "Intel graphics are supported through the portable CPU path in v0.1; XPU acceleration is not claimed until validated.",

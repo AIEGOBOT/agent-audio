@@ -6,7 +6,8 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = [
-  "mcp>=1.12,<2",
+  "mcp>=1.30,<2",
+  "pywin32>=311; sys_platform == 'win32'",
 ]
 
 [project.scripts]
@@ -16,6 +17,7 @@ agent-audio-mcp = "agent_audio.mcp_server:main"
 [dependency-groups]
 dev = [
   "pytest>=8,<9",
+  "ruff>=0.14,<1",
 ]
 
 [build-system]
@@ -28,3 +30,9 @@ packages = ["src/agent_audio"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

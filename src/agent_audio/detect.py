@@ -59,7 +59,9 @@ def _detect_intel_graphics() -> bool:
     elif system == "Darwin":
         output = _command_output(["system_profiler", "SPDisplaysDataType"])
     else:
-        output = _command_output(["sh", "-lc", "lspci 2>/dev/null | grep -Ei 'vga|3d|display'"])
+        output = _command_output(
+            ["sh", "-lc", "lspci 2>/dev/null | grep -Ei 'vga|3d|display'"]
+        )
     low = output.lower()
     return "intel" in low or "arc" in low
 
@@ -79,7 +81,9 @@ def detect_environment() -> EnvironmentInfo:
         intel_graphics_detected=_detect_intel_graphics(),
         codex_installed=shutil.which("codex") is not None,
         claude_installed=shutil.which("claude") is not None,
-        cursor_installed=(shutil.which("cursor") is not None or shutil.which("agent") is not None),
+        cursor_installed=(
+            shutil.which("cursor") is not None or shutil.which("agent") is not None
+        ),
     )
 
 
