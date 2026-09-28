@@ -60,6 +60,31 @@ Give your coding agent this repository URL and say:
 The agent should follow the installation guide and report any configuration
 conflicts or required model access. Existing settings are preserved.
 
+## Disk space and memory
+
+These figures apply to the default **Windows x64 / TFLite CPU / Stable Audio 3
+Medium** configuration. Planning recommendations are not verified minimum specs.
+
+| Item | Planning guidance / measurement |
+|---|---|
+| Free disk space before installation | **25 GB or more recommended**, allowing for temporary downloads, package caches, model copies and additional outputs |
+| Model downloads | Four default weights total **7.36 GB (6.86 GiB)**; runtime and Python packages are additional |
+| Installed file sizes | Dedicated data directory, generated native cache and MCP venv: **8.15 GB (7.59 GiB)** with hardlinks counted once |
+| System RAM | **32 GB class recommended**, matching the tested Windows host; 8/16 GB minimum configurations have not been validated |
+| Generation memory | Inference process peak Working Set: **11.56 GiB** for one 3-second generation; OS/editor/other applications are additional |
+| GPU / VRAM | No dedicated GPU or VRAM required for the current CPU backend |
+
+The model directory and cache share hardlinks where possible. Summing both
+directory sizes counts weights twice: 15.51 GB in this installation. Copying
+instead of hardlinking increases storage use. The installed-size figure excludes
+the separate uv cache, base Python, external output folders and filesystem
+overhead. Disk GB is decimal; GiB is binary.
+
+Memory was measured on 2026-09-28 with an existing native cache and one 3-second
+request. It is not a first-run or long-generation maximum. Apple Silicon MLX
+storage and unified memory requirements need separate validation; do not apply
+the CPU numbers to MLX. See [measurement details (Korean)](docs/resource-requirements.md).
+
 ## Manual developer setup
 
 Requires Git, Python 3.11+ and uv. The separate audio runtime uses Python 3.12.
