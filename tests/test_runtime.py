@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import wave
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,20 @@ def test_wrapper_alone_is_not_a_ready_runtime(tmp_path, monkeypatch):
     for name in ("sa3", "sa3.bat", "sa3.ps1"):
         (folder / name).write_text("wrapper only")
     assert not runtime.backend_ready("tflite")
+
+
+def test_mlx_runtime_does_not_require_tflite_tokenizer(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENT_AUDIO_HOME", str(tmp_path))
+    monkeypatch.setattr(runtime, "_venv_ready", lambda backend: backend == "mlx")
+    folder = runtime.runtime_paths().upstream / "optimized" / "mlx"
+    (folder / "scripts").mkdir(parents=True)
+    (folder / "scripts" / "sa3_mlx.py").write_text("# runtime entry point")
+    for path in runtime._model_paths("mlx"):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(path, "w") as archive:
+            archive.writestr("test.npy", b"model fixture")
+    assert not (folder / "models" / "tokenizer.model").exists()
+    assert runtime.backend_ready("mlx")
 
 
 def test_generation_logs_do_not_corrupt_mcp_stdout(tmp_path, monkeypatch, capfd):

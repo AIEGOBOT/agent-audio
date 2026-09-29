@@ -274,7 +274,9 @@ def backend_ready(backend: str | None = None) -> bool:
                 return False
     except OSError:
         return False
-    return (folder / "models" / "tokenizer.model").is_file()
+    # TFLite ships a separate tokenizer.model. MLX embeds tokenizer bytes in
+    # t5gemma_f16.npz, so requiring the TFLite file would reject a ready Mac runtime.
+    return backend == "mlx" or (folder / "models" / "tokenizer.model").is_file()
 
 
 def _runtime_command(backend: str) -> tuple[list[str], Path]:
