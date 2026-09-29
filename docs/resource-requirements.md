@@ -1,73 +1,73 @@
-# 용량·메모리 측정 기록
+# Disk space and memory measurements
 
-이 문서는 설치 전 준비를 위한 관측값과 운영 권장치를 설명합니다. **최소 사양을 검증한 벤치마크는 아닙니다.** 디스크 용량은 1GB = 1,000,000,000바이트, 1GiB = 1,073,741,824바이트로 표기합니다.
+This document records observations and planning recommendations for installation. **It is not a benchmark of minimum system requirements.** Disk units use 1 GB = 1,000,000,000 bytes and 1 GiB = 1,073,741,824 bytes.
 
-## 준비 권장치
+## Planning recommendations
 
-- Windows TFLite CPU 기본 구성: 설치 대상 볼륨에 **25GB 이상 여유**, 시스템 RAM은 **32GB급**을 권장합니다.
-- 디스크 권장치는 현재 설치 파일뿐 아니라 패키지·다운로드 임시 파일·모델 복사·향후 출력의 여유를 둔 값입니다. 전체 오디오 프로젝트의 저장량까지 보장하지 않습니다.
-- RAM 권장치는 실제 검증 호스트와 약 11.56GiB의 추론 프로세스 최고 Working Set을 기준으로 OS·에디터·다른 프로그램의 여유를 고려한 운영 지침입니다. 8GB·16GB 환경과 긴 생성의 최소 RAM은 검증하지 않았습니다.
-- 현재 CPU 경로는 전용 GPU·VRAM을 요구하지 않습니다. 내장 GPU가 보고하는 공유 메모리 용량과 시스템 RAM 요구량을 혼동하지 마세요.
-- Apple Silicon의 MLX 경로에는 별도의 모델 크기와 통합 메모리 사용량이 적용됩니다. 아래 Windows 측정값을 MLX 최소 사양으로 사용하지 마세요.
+- For the default Windows TFLite CPU configuration, allow **at least 25 GB of free disk space** on the installation volume and plan for a **32 GB class RAM system**.
+- The disk recommendation leaves room for installed files, packages, temporary downloads, model copies and future outputs. It does not cover every audio project's storage needs.
+- The RAM recommendation is based on the tested host and an observed inference process peak Working Set of about 11.56 GiB, allowing room for the OS, editor and other applications. Minimum RAM on 8/16 GB systems or for long generations has not been validated.
+- The current CPU path requires no dedicated GPU or VRAM. Do not confuse an integrated GPU's reported shared memory capacity with system RAM requirements.
+- Apple Silicon MLX has different model sizes and unified memory usage. Do not use these Windows observations as MLX minimum specs.
 
-## 측정 조건
+## Measurement conditions
 
-| 항목 | 조건 |
+| Item | Condition |
 |---|---|
-| 측정 날짜 | 2026-09-28 |
+| Date | 2026-09-28 |
 | Agent Audio | `76d08838ef2dd03ddf9ceafe049a92c6a3592251` |
-| OS·CPU | Windows 11 x64, Intel Core Ultra 7 258V |
-| 시스템 RAM | 32GiB 장착; OS에서 약 31.59GiB 사용 가능 |
-| 백엔드·모델 | TFLite / LiteRT 2.2.0 CPU, Stable Audio 3 Medium |
-| 런타임 커밋 | `779434a908193105335fd8d833418603625b2859` |
-| 모델 revision | `da6edc54ddba10bfd79a077102ded687f80e882b` |
-| 생성 조건 | MCP `generate_audio`, 3초, `medium` DiT / `same-l` 디코더, 기본 옵션 |
-| 캐시 상태 | 모델 및 네이티브 생성 캐시가 이미 존재하는 상태 |
-| 결과 | 529,244바이트 WAV, 44.1kHz, 스테레오, 3.0초; MCP 호출 약 57.2초 |
+| OS and CPU | Windows 11 x64, Intel Core Ultra 7 258V |
+| System RAM | 32 GiB installed; about 31.59 GiB usable by the OS |
+| Backend and model | TFLite / LiteRT 2.2.0 CPU, Stable Audio 3 Medium |
+| Runtime commit | `779434a908193105335fd8d833418603625b2859` |
+| Model revision | `da6edc54ddba10bfd79a077102ded687f80e882b` |
+| Generation | MCP `generate_audio`, 3 seconds, `medium` DiT / `same-l` decoder, default options |
+| Cache state | Model files and native generation cache already present |
+| Result | 529,244-byte WAV, 44.1 kHz, stereo, 3.0 seconds; MCP call took about 57.2 seconds |
 
-기존 ComfyUI·Stability Matrix·별도 오디오 환경을 호출하지 않고, 이번 설치 테스트로 준비한 Agent Audio 전용 런타임을 사용했습니다. 실행 속도는 호스트 부하에 따라 달라지며 위 시간은 한 번의 관측값입니다.
+The test used the dedicated Agent Audio runtime prepared during this installation test. It did not invoke an existing ComfyUI, Stability Matrix or separate audio environment. Runtime varies with host load; the duration above is a single observation.
 
-## 다운로드와 저장 공간
+## Downloads and storage
 
-현재 설치기가 내려받는 TFLite 모델은 다음 4개입니다. 모델 이름과 정밀도가 달라지면 다운로드 용량도 달라집니다.
+The installer currently downloads these four TFLite files. Different models or precision variants have different download sizes.
 
-| 파일 | 바이트 |
+| File | Bytes |
 |---|---:|
 | `sa3-m/dit_fp32.tflite` | 5,816,313,104 |
 | `same-l/dec_w8a8.tflite` | 515,381,432 |
 | `same-l/enc_w8a8.tflite` | 466,762,056 |
 | `t5gemma/encoder_fp16.tflite` | 563,818,608 |
-| **모델 합계** | **7,362,275,200 — 약 7.36GB / 6.86GiB** |
+| **Model total** | **7,362,275,200 — about 7.36 GB / 6.86 GiB** |
 
-모델 파일 크기의 합계이며 네트워크 프로토콜 오버헤드·재시도·Python 패키지·런타임 다운로드는 포함하지 않습니다.
+This is the sum of model file sizes. Network overhead, retries, Python packages and runtime downloads are additional.
 
-| 설치 후 측정 범위 | 바이트 |
+| Installed files measured | Bytes |
 |---|---:|
-| 전용 데이터 폴더, 하드링크 중복 제외 | 8,063,142,903 |
-| MCP 애플리케이션 `.venv`, 개발 의존성 포함 | 82,049,559 |
-| **합계** | **8,145,192,462 — 약 8.15GB / 7.59GiB** |
-| 하드링크를 중복 계산한 단순 폴더 합계 | 15,507,467,662 — 약 15.51GB |
+| Dedicated data directory, counting hardlinks once | 8,063,142,903 |
+| MCP application `.venv`, including development dependencies | 82,049,559 |
+| **Total** | **8,145,192,462 — about 8.15 GB / 7.59 GiB** |
+| Simple directory sum counting hardlinks repeatedly | 15,507,467,662 — about 15.51 GB |
 
-전용 데이터 폴더에는 공식 런타임 체크아웃·런타임 `.venv`·모델·Hugging Face 캐시와 생성 후의 네이티브 캐시가 포함됩니다. 관측한 디코더 XNNPACK 캐시 한 파일은 약 0.43GB였습니다. 다른 생성 조건에서는 캐시가 더 늘어날 수 있습니다.
+The dedicated data directory includes the official runtime checkout, runtime `.venv`, models, Hugging Face cache and native cache after generation. One observed decoder XNNPACK cache file was about 0.43 GB. Other generation settings may create additional cache files.
 
-합계는 `(장치 ID, 파일 ID)`가 같은 하드링크를 한 번만 계산한 **파일 길이 합계**입니다. 디스크 클러스터 할당·압축·파일시스템 메타데이터까지 측정한 실제 할당량은 아닙니다. 별도 `uv` 패키지 캐시·기본 Python·Agent Audio 소스 체크아웃·외부 출력 폴더는 제외했습니다. 모델을 하드링크 대신 복사하는 파일시스템에서는 저장량이 증가합니다. 외부 프로그램과 공유된 파일의 비용을 구분하는 설치 전후 디스크 차이 측정도 아닙니다.
+The total is the **sum of file lengths**, counting entries with the same `(device ID, file ID)` once. It is not the actual allocation including disk clusters, compression and filesystem metadata. The separate `uv` package cache, base Python, Agent Audio source checkout and external output folders are excluded. Storage use increases when models are copied instead of hardlinked. This is also not a before/after disk usage measurement that assigns costs for files shared with external programs.
 
-## 메모리 측정 방법과 한계
+## Memory measurement and limitations
 
-실제 stdio MCP 클라이언트로 새 Agent Audio 서버를 시작하고, 그 서버와 자식 프로세스만 Windows 프로세스 스냅샷으로 추적했습니다. 약 0.1초 간격으로 `GetProcessMemoryInfo`를 읽었습니다. 관련 없는 기존 MCP와 측정 클라이언트 자체는 합계에서 제외했습니다.
+A real stdio MCP client started a new Agent Audio server. Windows process snapshots tracked only that server and its descendants. `GetProcessMemoryInfo` was read about every 0.1 seconds. Unrelated existing MCP servers and the measurement client itself were excluded.
 
-| 지표 | 관측값 |
+| Metric | Observation |
 |---|---:|
-| 추론 프로세스 `PeakWorkingSetSize` | 12,413,423,616바이트 — **약 11.56GiB** |
-| MCP·자식 프로세스 Working Set 합계의 샘플 최대값 | 12,493,750,272바이트 — 약 11.64GiB |
-| 추론 프로세스 최고 private commit (`PeakPagefileUsage`) | 6,844,239,872바이트 — 약 6.37GiB |
+| Inference process `PeakWorkingSetSize` | 12,413,423,616 bytes — **about 11.56 GiB** |
+| Largest sampled sum of MCP and descendant Working Sets | 12,493,750,272 bytes — about 11.64 GiB |
+| Inference process peak private commit (`PeakPagefileUsage`) | 6,844,239,872 bytes — about 6.37 GiB |
 
-Working Set에는 메모리에 올라온 모델 매핑 등 공유 가능한 페이지도 포함됩니다. 프로세스별 Working Set을 합산하면 공유 페이지가 중복될 수 있습니다. Private commit은 해당 프로세스가 확보한 사유 가상 메모리이며, 실제 페이지 파일의 사용량이나 물리 RAM 총량을 뜻하지 않습니다. 두 지표를 더해서 RAM 필요량으로 계산하지 마세요.
+Working Set includes shareable resident pages such as mapped model files. Summing Working Sets across processes can count shared pages more than once. Private commit is private committed virtual memory; it is not actual pagefile occupancy or total physical RAM. Do not add these two metrics to calculate RAM requirements.
 
-OS가 유지하는 프로세스 최고값을 종료 전에 주기적으로 읽었으며, 샘플 사이의 종료 직전 변화는 놓칠 수 있습니다. 이 관측은 최초 설치·콜드 캐시·장시간 생성의 절대 최고치를 증명하지 않습니다. 메모리 매핑·OS 캐시·다른 애플리케이션의 점유 상태도 영향을 줍니다.
+The OS-maintained process peak counters were sampled before exit; a final change between samples and process exit could be missed. This observation does not establish an absolute peak for first installation, a cold cache or long generations. Memory mapping, OS caches and other applications also affect usage.
 
-## 업스트림과 다른 환경
+## Upstream documentation and other environments
 
-[고정 커밋의 공식 TFLite 안내](https://github.com/Stability-AI/stable-audio-3/blob/779434a908193105335fd8d833418603625b2859/optimized/tflite/README.md)는 CPU 실행과 모델 정밀도별 파일 크기를 설명합니다. 이 문서의 설치 용량은 업스트림의 모든 변형을 합한 값이 아니라 Agent Audio가 선택한 4개 파일과 실제 설치 구성으로 측정했습니다.
+The [official TFLite guide at the pinned commit](https://github.com/Stability-AI/stable-audio-3/blob/779434a908193105335fd8d833418603625b2859/optimized/tflite/README.md) explains CPU execution and file sizes by precision. The installation sizes here were measured for Agent Audio's four selected files and actual installation, rather than every upstream variant combined.
 
-[공식 MLX 안내의 메모리 측정](https://github.com/Stability-AI/stable-audio-3/blob/779434a908193105335fd8d833418603625b2859/optimized/mlx/README.md#speed--memory)은 별도 하드웨어·백엔드·메모리 해제 옵션의 결과입니다. Agent Audio를 통한 MLX의 실제 설치·생성을 검증한 후 이 문서에 별도 측정 행을 추가해야 합니다.
+The [official MLX memory measurements](https://github.com/Stability-AI/stable-audio-3/blob/779434a908193105335fd8d833418603625b2859/optimized/mlx/README.md#speed--memory) use different hardware, a different backend and model-release options. Add separate measurements here after validating actual MLX installation and generation through Agent Audio.

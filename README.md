@@ -1,60 +1,92 @@
 # Agent Audio
 
-**AI 코딩 에이전트를 위한 독립형 로컬 오디오 생성 MCP와 Skill입니다.**
+Universal local audio generation for AI coding agents.
 
-한국어 | [English](README.en.md)
+Agent Audio exposes Stable Audio 3 through an MCP server and ships a portable Agent Skill that can be discovered by Codex, Claude Code, Cursor, and other Agent Skills/MCP-compatible clients.
 
-Agent Audio는 Stable Audio 3를 MCP 서버로 제공하고, Codex·Claude Code·Cursor 등 MCP와 Agent Skills를 지원하는 클라이언트에 `audio-production` Skill을 설치합니다. ComfyUI, Stability Matrix, 기존 Stable Audio 환경이나 모델 폴더 없이 전용 런타임과 모델을 준비합니다.
+## Goal
 
-## 에이전트에게 설치 맡기기
-
-AI 코딩 에이전트에게 이 저장소 주소와 함께 다음을 요청하세요.
-
-> 이 저장소를 설치해 줘. 먼저 INSTALL_AGENT.md를 읽고 지침을 따라 진행해. 현재 OS·하드웨어·Python·uv·에이전트 설치 상태를 확인하고, 전용 런타임과 모델을 설치한 다음 MCP 서버와 audio-production Skill을 등록해. 기존 설정은 보존하고, 모델 이용약관을 내 대신 수락하지 마. 마지막으로 MCP를 통해 짧은 WAV를 실제 생성해서 확인해.
-
-설치 흐름은 다음과 같습니다.
+The intended installation flow is deliberately agent-first:
 
 ```text
-저장소 주소 전달 → INSTALL_AGENT.md 확인 → 환경 조사
-→ 전용 런타임·모델 설치 → MCP·Skill 등록 → 실제 WAV 생성 검증
+User gives an AI coding agent this GitHub repository URL
+        ↓
+Agent reads INSTALL_AGENT.md
+        ↓
+Agent detects OS / hardware / installed clients
+        ↓
+Agent installs the local runtime
+        ↓
+Agent registers the MCP server + audio-production skill
+        ↓
+User asks for a larger task
+        ↓
+Agent invokes audio-production automatically when audio is materially useful
 ```
 
-설치 후에는 효과음·음악·환경음 등 오디오가 필요한 작업을 요청할 수 있습니다. Skill은 더 큰 개발·미디어 작업에서도 오디오가 필요한 상황을 판단하도록 안내합니다.
+Agent Audio installs a dedicated runtime and models without requiring ComfyUI,
+Stability Matrix, or an existing Stable Audio environment.
 
-## 현재 지원 및 검증 범위
+## Current status
 
-v0.1 초기 버전이며, 기본 모델은 **Stable Audio 3 Medium**입니다.
+This repository is an early v0.1 release. Independent installation and real
+3-second, 44.1 kHz stereo WAV generation through MCP were verified on Windows
+using the TFLite/LiteRT CPU backend. Model-free CI passed on Windows, macOS and
+Linux, with 45 tests in each of five Python/OS combinations, plus dependency
+auditing and CodeQL. Real MLX generation still needs Apple hardware validation;
+model-free CI does not establish model inference support on every platform.
 
-| 환경 | 선택하는 백엔드 | 검증 상태 |
-|---|---|---|
-| Windows / Intel·NVIDIA 등 | TFLite / LiteRT CPU | Windows Intel 환경에서 독립 설치와 MCP를 통한 실제 생성 확인 |
-| Linux 및 Apple Silicon 이외 환경 | TFLite / LiteRT CPU | 모델 없이 실행하는 CI 테스트 통과; 모든 환경의 실제 모델 생성까지 검증한 것은 아님 |
-| macOS Apple Silicon | 공식 MLX 런타임 | 모델 없이 실행하는 macOS CI 테스트 통과; MLX 실제 생성은 별도 하드웨어 검증 필요 |
+Working design targets:
 
-NVIDIA CUDA·TensorRT와 Intel XPU 가속은 자동 선택하지 않습니다. 검증된 가속 어댑터가 추가되기 전까지 해당 하드웨어에서는 CPU 백엔드를 사용합니다. MCP 도구는 특정 GPU나 게임 엔진에 종속되지 않습니다.
+- Windows, macOS and Linux.
+- NVIDIA, Intel and Apple hardware without making the MCP protocol hardware-specific.
+- Codex, Claude Code and Cursor first; additional MCP/Agent Skills clients can be added as adapters.
+- Stable Audio 3 Medium as the default high-quality model.
+- Portable CPU fallback through Stability AI's official TFLite/LiteRT implementation.
+- Apple Silicon acceleration through Stability AI's official MLX implementation.
 
-2026-09-27 검증에서 기존 오디오 환경을 사용하지 않고 MCP로 **3초·44.1 kHz·스테레오 WAV**를 생성했습니다. GitHub CI에서는 Windows·macOS·Linux의 5개 Python/OS 조합에서 각각 45개 테스트와 의존성 감사·CodeQL 검사가 통과했습니다.
+Acceleration roadmap:
 
-## 용량·메모리 준비
+- NVIDIA CUDA / TensorRT: backend interface reserved; automatic cross-platform setup still needs validation, especially on Windows.
+- Intel XPU: backend interface reserved; until validated, Intel systems use the portable CPU runtime rather than pretending XPU acceleration is supported.
 
-아래는 **Windows x64 / TFLite CPU / Stable Audio 3 Medium 기본 구성**을 기준으로 한 안내입니다. 운영 권장치는 여유를 둔 준비 기준이며, 검증된 최소 사양이 아닙니다.
+## Install with an AI agent
 
-| 항목 | 준비 기준·측정 결과 |
+Give your coding agent this repository URL and say:
+
+> Install this project. Read INSTALL_AGENT.md first and follow its instructions. Inspect my OS, hardware, Python, uv and installed agent clients. Install the dedicated runtime and models, register both the MCP server and audio-production Skill, and verify a short WAV through MCP. Preserve existing settings and do not accept model licenses on my behalf.
+
+The agent should follow the installation guide and report any configuration
+conflicts or required model access. Existing settings are preserved.
+
+## Disk space and memory
+
+These figures apply to the default **Windows x64 / TFLite CPU / Stable Audio 3
+Medium** configuration. Planning recommendations are not verified minimum specs.
+
+| Item | Planning guidance / measurement |
 |---|---|
-| 설치 전 디스크 여유 | **25GB 이상 권장**. 다운로드 임시 파일·패키지 캐시·모델 복사본·추가 출력의 여유 포함 |
-| 모델 다운로드 | 기본 모델 4개 합계 **약 7.36GB (6.86GiB)**. Python 패키지·런타임 다운로드는 별도 |
-| 설치 후 파일 크기 | 생성 캐시를 포함한 전용 데이터 폴더와 MCP 가상환경 합계 **약 8.15GB (7.59GiB)**. 하드링크 중복을 제외한 측정값 |
-| 시스템 RAM | **32GB급 권장**. 해당 용량의 Windows 호스트에서 실제 생성 확인; 8GB·16GB 최소 사양은 미검증 |
-| 생성 중 메모리 | 3초 생성 시 추론 프로세스의 최고 Working Set **약 11.56GiB**. OS·에디터·다른 프로그램 메모리는 별도 |
-| GPU / VRAM | 현재 CPU 경로는 전용 GPU나 전용 VRAM을 요구하지 않음. Intel GPU 표기 용량을 필수 VRAM으로 해석하지 않음 |
+| Free disk space before installation | **25 GB or more recommended**, allowing for temporary downloads, package caches, model copies and additional outputs |
+| Model downloads | Four default weights total **7.36 GB (6.86 GiB)**; runtime and Python packages are additional |
+| Installed file sizes | Dedicated data directory, generated native cache and MCP venv: **8.15 GB (7.59 GiB)** with hardlinks counted once |
+| System RAM | **32 GB class recommended**, matching the tested Windows host; 8/16 GB minimum configurations have not been validated |
+| Generation memory | Inference process peak Working Set: **11.56 GiB** for one 3-second generation; OS/editor/other applications are additional |
+| GPU / VRAM | No dedicated GPU or VRAM required for the current CPU backend |
 
-캐시와 모델은 가능하면 같은 파일을 하드링크로 공유합니다. 폴더 크기를 단순 합산하면 이번 환경에서는 약 15.51GB로 중복 집계됩니다. 하드링크 대신 모델 복사가 필요한 경우에는 실제 저장량도 증가합니다. 위 설치 크기는 별도 `uv` 캐시·기본 Python·외부 출력 폴더와 파일시스템 관리 공간을 제외합니다.
+The model directory and cache share hardlinks where possible. Summing both
+directory sizes counts weights twice: 15.51 GB in this installation. Copying
+instead of hardlinking increases storage use. The installed-size figure excludes
+the separate uv cache, base Python, external output folders and filesystem
+overhead. Disk GB is decimal; GiB is binary.
 
-메모리는 2026-09-28에 이미 생성 캐시가 있는 상태에서 3초 효과음 한 번을 측정했습니다. 최초 실행·긴 오디오·다른 백엔드의 최대 사용량을 보장하지 않습니다. Apple Silicon MLX의 디스크·통합 메모리 요구량은 이 CPU 수치와 구분해 확인해야 합니다. [측정 조건과 상세 수치](docs/resource-requirements.md)를 참고하세요.
+Memory was measured on 2026-09-28 with an existing native cache and one 3-second
+request. It is not a first-run or long-generation maximum. Apple Silicon MLX
+storage and unified memory requirements need separate validation; do not apply
+the CPU numbers to MLX. See [measurement details](docs/resource-requirements.md).
 
-## 직접 설치하기
+## Manual developer setup
 
-Git, Python 3.11 이상, `uv`가 필요합니다. MCP 애플리케이션과 별도로 설치되는 오디오 런타임은 Python 3.12를 사용합니다. 모델 다운로드를 위한 네트워크와 디스크 공간을 준비하세요.
+Requires Git, Python 3.11+ and uv. The separate audio runtime uses Python 3.12.
 
 ```bash
 git clone https://github.com/AIEGOBOT/agent-audio.git
@@ -63,47 +95,61 @@ uv sync --frozen
 uv run --frozen python install/bootstrap.py --doctor
 ```
 
-진단 결과를 확인한 뒤 런타임·모델을 설치하고 MCP·Skill을 등록합니다.
+After reviewing diagnostics, install the runtime and models, then register
+detected clients:
 
 ```bash
 uv run --frozen python install/bootstrap.py --runtime-only
 uv run --frozen python install/bootstrap.py --register-only
 ```
 
-두 단계를 한 번에 실행하려면 다음 명령을 사용합니다.
+Use `--register-only` by itself when the runtime is already prepared.
+
+To install the runtime and register detected agents:
 
 ```bash
 uv run --frozen python install/bootstrap.py
 ```
 
-이미 런타임이 준비되어 있다면 `--register-only`로 등록만 진행할 수 있습니다. 새 MCP나 Skill을 찾지 못하는 클라이언트는 관련 세션을 다시 여세요. 이용약관 동의나 인증이 필요한 경우 사용자가 직접 완료해야 합니다.
+The default data directory is `~/.agent-audio`: the runtime lives in
+`runtime/stable-audio-3/`, its models in `optimized/<backend>/models/`, the private
+model cache in `cache/huggingface/`, and generated audio in `output/`. Set
+`AGENT_AUDIO_HOME` before installation to choose a separate data directory; new
+MCP registrations retain it. The MCP application uses the repository's `.venv`;
+the runtime uses its own `optimized/<backend>/.venv`.
 
-### 설치 경로와 기존 설정 보존
+Conflicting Skills, runtime checkouts and MCP entries are preserved and reported.
+Legacy MCP entries without Python's `-I` need a reviewed migration. Runtime and
+model revisions are pinned; TFLite model downloads also use SHA-256 verification.
+See [security boundaries](SECURITY.md) for limitations and configuration handling.
 
-| 항목 | 기본 경로 |
+Skill destinations for detected clients:
+
+| Client | Skill directory |
 |---|---|
-| MCP Python | 저장소의 `.venv/` |
-| Stable Audio 런타임 | `~/.agent-audio/runtime/stable-audio-3/` |
-| 런타임 Python | 위 경로의 `optimized/<backend>/.venv/` |
-| 모델 | 위 경로의 `optimized/<backend>/models/` |
-| Hugging Face 캐시 | `~/.agent-audio/cache/huggingface/` |
-| 기본 WAV 출력 | `~/.agent-audio/output/` |
-| Codex Skill | `~/.agents/skills/audio-production/` |
-| Claude Code Skill | `~/.claude/skills/audio-production/` |
-| Cursor Skill | `~/.cursor/skills/audio-production/` |
+| Codex | `~/.agents/skills/audio-production/` |
+| Claude Code | `~/.claude/skills/audio-production/` |
+| Cursor | `~/.cursor/skills/audio-production/` |
 
-`~`는 현재 사용자 홈 폴더입니다. 설치 전에 `AGENT_AUDIO_HOME`을 지정하면 런타임·모델·캐시·기본 출력의 루트 경로를 분리할 수 있습니다. 새 MCP 등록에도 이 경로를 저장합니다.
+Open a fresh client session if it does not discover the new MCP server or Skill.
+Any required authentication or license acceptance must be completed by the user.
 
-기존 Skill 내용이나 같은 이름의 MCP 설정이 다르면 덮어쓰지 않고 충돌을 보고합니다. Python `-I` 옵션이 없는 구형 MCP 항목도 검토 후 전환해야 합니다. 자세한 동작과 제약은 [보안 안내](SECURITY.md)를 확인하세요.
+## MCP tools
 
-## MCP 도구
+The initial MCP server exposes:
 
-| 도구 | 기능 |
-|---|---|
-| `audio_status` | OS·하드웨어·선택 백엔드·런타임 준비 상태·실제 Python 및 모델 경로 확인 |
-| `generate_audio` | 프롬프트와 길이를 받아 선택된 백엔드로 WAV 생성 |
+- `audio_status` — inspect platform, hardware and runtime readiness.
+- `generate_audio` — generate a WAV using the selected Stable Audio backend.
 
-3초 효과음 생성 요청 예시입니다.
+The MCP surface intentionally does not contain Unity/game-specific concepts. Games, videos, applications, websites, film, advertising and general media workflows all use the same audio layer.
+
+`audio_status` includes the runtime Python and model paths. For `generate_audio`,
+omit `output_path` to get a unique WAV in the default output folder, or specify a
+new `.wav` path. Existing outputs are never overwritten. The output filesystem
+must support hardlinks. Duration must be greater than zero and at most 380
+seconds; long CPU requests may exceed the 540-second inference timeout.
+
+Example arguments for a 3-second effect:
 
 ```json
 {
@@ -112,13 +158,11 @@ uv run --frozen python install/bootstrap.py
 }
 ```
 
-`output_path`를 생략하면 기본 출력 폴더에 고유한 이름으로 저장합니다. 직접 지정할 때는 아직 존재하지 않는 `.wav` 경로를 사용하세요. 길이는 0초 초과 380초 이하이며, 긴 CPU 생성은 540초 실행 제한에 도달할 수 있습니다. 출력 파일시스템은 하드링크를 지원해야 합니다.
+These two MCP tools do not expose every capability of the upstream model.
 
-게임·영상·애플리케이션·웹사이트·광고 등에서 같은 MCP 도구를 사용할 수 있습니다. 모델 자체의 전체 기능이 이 두 도구로 모두 제공되는 것은 아닙니다.
+## Development checks
 
-## 개발 및 검증
-
-저장소 루트에서 다음 검사를 실행합니다. 단위 테스트에는 모델 가중치가 필요하지 않습니다.
+These checks do not require model weights. Doctor also works offline.
 
 ```bash
 uv run --frozen ruff check src install tests
@@ -128,20 +172,28 @@ uv run --frozen pytest -q
 uv run --frozen python install/bootstrap.py --doctor
 ```
 
-`--doctor`는 네트워크 없이 동작합니다. 실제 모델 설치·생성 검증과 모델 없는 단위 테스트 결과는 구분해서 보고해야 합니다.
+## Model licenses
 
-## 문서와 구성
+Model weights are **not** included in this repository.
 
-- [에이전트 설치 지침](INSTALL_AGENT.md): 환경 조사부터 실제 생성 검증까지의 순서
-- [저장소 작업 지침](AGENTS.md): 구조 원칙과 변경 후 필수 검사
-- [보안 안내](SECURITY.md): 설정 보존, 실행 격리, 제한사항
-- [제3자 고지](THIRD_PARTY_NOTICES.md): 모델·런타임의 별도 이용약관
+Stable Audio 3 Medium is distributed separately by Stability AI and is subject to the Stability AI Community License. It also includes T5Gemma components subject to Gemma terms. The installer must never silently accept those terms for the user.
+
+See [third-party notices](THIRD_PARTY_NOTICES.md).
+
+## Documentation and project layout
+
+- [Agent installation guide](INSTALL_AGENT.md): inspect, install, register and verify.
+- [Repository instructions](AGENTS.md): architecture rules and required checks.
+- [Security boundaries](SECURITY.md): configuration preservation and execution limits.
+- [Resource measurements](docs/resource-requirements.md): disk and memory guidance.
+- [Third-party notices](THIRD_PARTY_NOTICES.md): separate model and runtime terms.
 
 ```text
 agent-audio/
 ├─ INSTALL_AGENT.md
 ├─ AGENTS.md
 ├─ SECURITY.md
+├─ docs/resource-requirements.md
 ├─ skills/audio-production/
 ├─ src/agent_audio/
 ├─ install/bootstrap.py
@@ -150,6 +202,6 @@ agent-audio/
 └─ .github/workflows/
 ```
 
-## 라이선스
+## License
 
-Agent Audio 소스 코드는 [MIT 라이선스](LICENSE)를 따릅니다. 모델 가중치는 저장소에 포함하지 않습니다. Stable Audio 3와 T5Gemma 등 제3자 모델·런타임에는 각각의 이용약관이 적용되며, 설치기는 사용자를 대신해 약관을 수락하지 않습니다. 자세한 내용은 [제3자 고지](THIRD_PARTY_NOTICES.md)를 확인하세요.
+Agent Audio source code is [MIT licensed](LICENSE). Third-party models and runtimes keep their own licenses.
