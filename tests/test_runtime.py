@@ -49,7 +49,56 @@ def test_generation_logs_do_not_corrupt_mcp_stdout(tmp_path, monkeypatch, capfd)
     runtime.generate_audio("unit test", 3, str(tmp_path / "test.wav"))
     captured = capfd.readouterr()
     assert "runtime diagnostic" not in captured.out
-    assert "runtime diagnostic" in captured.err
+    assert "runtime diagnostic" not in captured.err
+    assert not list((tmp_path / "logs").glob("*.log"))
+
+
+def test_inference_does_not_inherit_closed_stderr_pipe(tmp_path, monkeypatch):
+    import os
+
+    from agent_audio.process import run_inference
+
+    read_fd, write_fd = os.pipe()
+    os.close(read_fd)
+    with os.fdopen(write_fd, "w") as broken_stderr:
+        with monkeypatch.context() as patch:
+            patch.setattr(sys, "stderr", broken_stderr)
+            run_inference(
+                [
+                    sys.executable,
+                    "-c",
+                    "import sys; print('done'); print('diagnostic', file=sys.stderr)",
+                ],
+                tmp_path,
+                runtime.runtime_environment(),
+                10,
+                log_dir=tmp_path / "logs",
+            )
+    assert not list((tmp_path / "logs").glob("*.log"))
+
+
+def test_failed_inference_keeps_private_log_without_echoing_prompt(tmp_path):
+    from agent_audio.process import run_inference
+
+    prompt = "private prompt text"
+    with pytest.raises(RuntimeError, match="exit code 7") as error:
+        run_inference(
+            [
+                sys.executable,
+                "-c",
+                "import sys; print(sys.argv[1]); sys.exit(7)",
+                prompt,
+            ],
+            tmp_path,
+            runtime.runtime_environment(),
+            10,
+            log_dir=tmp_path / "logs",
+        )
+    assert prompt not in str(error.value)
+    logs = list((tmp_path / "logs").glob("*.log"))
+    assert len(logs) == 1
+    assert prompt in logs[0].read_text()
+    assert str(logs[0]) in str(error.value)
 
 
 def test_model_cache_cannot_reuse_an_unrelated_hf_cache(tmp_path, monkeypatch):
@@ -167,7 +216,7 @@ def test_prompt_metacharacters_are_literal_and_raced_output_is_preserved(
     destination = tmp_path / "out.wav"
     prompt = '-n " & echo INJECTED | %PATH% ; $(touch marker)'
 
-    def render(command, cwd, env, timeout):
+    def render(command, cwd, env, timeout, log_dir):
         assert f"--prompt={prompt}" in command
         assert env["HF_HUB_OFFLINE"] == "1"
         path = command[command.index("--out") + 1]

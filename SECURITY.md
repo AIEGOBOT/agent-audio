@@ -51,9 +51,13 @@ existing user directory.
 ## Generation
 
 Prompts are passed as arguments to a Python executable, never through a shell.
-stdin is disconnected and diagnostic stdout is sent to stderr to protect the
-MCP JSON-RPC channel. Inference is serialized to protect native caches/memory,
-with a 540-second process-tree timeout (Codex's new entry gets 600 seconds).
+stdin is disconnected and diagnostic output goes to a private local log file
+to protect the MCP JSON-RPC channel and avoid broken host stderr pipes. Logs
+are deleted after successful runs; a failed inference retains its log under
+`AGENT_AUDIO_HOME/logs` (or `~/.agent-audio/logs`) and reports its path. These
+logs may contain prompts, so review them before sharing. Inference is serialized
+to protect native caches/memory, with a 540-second process-tree timeout (Codex's
+new entry gets 600 seconds).
 Long CPU generations can hit that limit; they fail rather than returning a stale
 file. An interrupted application can leave a lock file; check that its recorded
 PID has exited before manually removing that lock.

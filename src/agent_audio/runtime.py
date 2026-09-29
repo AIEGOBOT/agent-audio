@@ -366,10 +366,18 @@ def generate_audio(
                 "1"  # Generation never silently downloads another revision.
             )
             try:
-                run_inference(command, cwd, env, GENERATION_TIMEOUT)
+                run_inference(
+                    command,
+                    cwd,
+                    env,
+                    GENERATION_TIMEOUT,
+                    log_dir=paths.root / "logs",
+                )
             except subprocess.TimeoutExpired as exc:
+                log_path = getattr(exc, "log_path", None)
+                log_hint = f" See local log {log_path}." if log_path else ""
                 raise RuntimeError(
-                    f"Stable Audio generation exceeded {GENERATION_TIMEOUT} seconds and was stopped."
+                    f"Stable Audio generation exceeded {GENERATION_TIMEOUT} seconds and was stopped.{log_hint}"
                 ) from exc
             if not temporary.is_file():
                 raise RuntimeError("Runtime completed without producing a WAV.")
