@@ -25,6 +25,8 @@ def main() -> None:
         result = perform_install()
 
     print(json.dumps(result, indent=2, ensure_ascii=False))
+    if result.get("success") is False:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

@@ -205,3 +205,110 @@ def test_doctor_needs_no_network(tmp_path, monkeypatch):
     result = installer.doctor()
     assert result["runtime_ready"] is False
     assert Path(result["runtime_path"]).is_relative_to(tmp_path)
+
+
+def test_registration_reports_partial_results_and_continues(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.setattr(installer, "_venv_python", lambda: Path("python"))
+    monkeypatch.setattr(
+        installer,
+        "detect_environment",
+        lambda: SimpleNamespace(
+            codex_installed=True, claude_installed=True, cursor_installed=False
+        ),
+    )
+    calls = []
+
+    def copy(root):
+        calls.append(root.parent.name)
+        if root.parent.name == ".agents":
+            raise RuntimeError("Skill conflict; preserved")
+        return root / installer.SKILL_NAME
+
+    def conflict(python):
+        raise RuntimeError("MCP conflict; preserved")
+
+    monkeypatch.setattr(installer, "_copy_skill", copy)
+    monkeypatch.setattr(installer, "_register_codex", conflict)
+    monkeypatch.setattr(installer, "_register_claude", lambda python: "registered")
+    monkeypatch.setattr(installer, "_register_cursor", lambda python: "not-installed")
+    result = installer.register_agents()
+    assert calls == [".agents", ".claude"]
+    assert result["success"] is False
+    assert result["skills"]["codex"]["status"] == "error"
+    assert result["skills"]["claude"]["status"] == "installed"
+    assert result["mcp"]["codex"]["error"] == "MCP conflict; preserved"
+    assert result["mcp"]["claude"]["status"] == "registered"
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "bootstrap"])
+def test_registration_entrypoints_print_partial_results_and_fail(
+    entrypoint, monkeypatch, capsys
+):
+    if entrypoint == "cli":
+        from agent_audio import cli as module
+
+        arguments = ["agent-audio", "register"]
+    else:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "bootstrap_test", installer.repo_root() / "install" / "bootstrap.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        arguments = ["bootstrap.py", "--register-only"]
+    monkeypatch.setattr(module, "register_agents", lambda: {"success": False})
+    monkeypatch.setattr("sys.argv", arguments)
+    with pytest.raises(SystemExit) as failure:
+        module.main()
+    assert failure.value.code == 1
+    assert json.loads(capsys.readouterr().out) == {"success": False}
+
+
+def test_linked_config_directory_preserved(tmp_path):
+    real = tmp_path / "real"
+    real.mkdir()
+    (real / "mcp.json").write_text("{}")
+    link = tmp_path / "linked"
+    try:
+        link.symlink_to(real, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlink creation privilege unavailable")
+    with pytest.raises(RuntimeError, match="link"):
+        installer._register_json(link / "mcp.json", Path("python"))
+    assert (real / "mcp.json").read_text() == "{}"
+    assert sorted(p.name for p in real.iterdir()) == ["mcp.json"]
+
+
+def test_linked_skill_client_directory_preserved(tmp_path):
+    real = tmp_path / "real"
+    real.mkdir()
+    link = tmp_path / "client"
+    try:
+        link.symlink_to(real, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlink creation privilege unavailable")
+    with pytest.raises(RuntimeError, match="link"):
+        installer._copy_skill(link / "skills")
+    assert not list(real.iterdir())
+
+
+def test_invalid_codex_server_container_preserved(tmp_path, monkeypatch):
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
+    monkeypatch.setattr(installer.shutil, "which", lambda _: "codex")
+    config = tmp_path / "config.toml"
+    original = 'mcp_servers = ["unexpected"]\n'
+    config.write_text(original)
+    with pytest.raises(RuntimeError, match="Invalid MCP config object"):
+        installer._register_codex(Path("python"))
+    assert config.read_text() == original
+
+
+def test_install_propagates_registration_failure(monkeypatch):
+    monkeypatch.setattr(installer, "doctor", lambda: {"runtime_ready": False})
+    monkeypatch.setattr(installer, "register_agents", lambda: {"success": False})
+    result = installer.perform_install(runtime=False)
+    assert result["success"] is False
+    assert result["registration"] == {"success": False}
+    assert result["doctor_after"] == {"runtime_ready": False}

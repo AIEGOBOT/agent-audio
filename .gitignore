@@ -8,4 +8,5 @@ output/
 *.wav
 *.flac
 *.mp3
+benchmark-results/
 .env

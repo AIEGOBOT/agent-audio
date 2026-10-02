@@ -1,0 +1,509 @@
+{
+  "schema_version": 1,
+  "durations": [
+    3,
+    10
+  ],
+  "items": [
+    {
+      "id": "impacts_01",
+      "category": "impacts",
+      "prompt": "A heavy steel hammer strikes an anvil once, sharp attack and short metallic ring, no speech or music."
+    },
+    {
+      "id": "impacts_02",
+      "category": "impacts",
+      "prompt": "A ceramic plate falls onto a tile floor and shatters, close dry recording."
+    },
+    {
+      "id": "impacts_03",
+      "category": "impacts",
+      "prompt": "A padded fist hits a leather punching bag, deep thump with a brief chain rattle."
+    },
+    {
+      "id": "impacts_04",
+      "category": "impacts",
+      "prompt": "A large wooden door slams shut in a stone hallway, one impact and short room echo."
+    },
+    {
+      "id": "impacts_05",
+      "category": "impacts",
+      "prompt": "A small pebble taps a glass window twice, delicate hard clicks."
+    },
+    {
+      "id": "explosions_01",
+      "category": "explosions",
+      "prompt": "A distant controlled demolition erupts with a low boom and rolling debris, no music."
+    },
+    {
+      "id": "explosions_02",
+      "category": "explosions",
+      "prompt": "A small firecracker pops outdoors with a crisp transient and brief fizz."
+    },
+    {
+      "id": "explosions_03",
+      "category": "explosions",
+      "prompt": "A sci-fi energy grenade bursts with a bright electric crack and bass tail."
+    },
+    {
+      "id": "explosions_04",
+      "category": "explosions",
+      "prompt": "A gas pressure vessel ruptures in a warehouse, sudden blast and metal fragments."
+    },
+    {
+      "id": "explosions_05",
+      "category": "explosions",
+      "prompt": "A muffled underwater explosion sends a deep pulse and bubbling tail."
+    },
+    {
+      "id": "weapons_01",
+      "category": "weapons",
+      "prompt": "A medieval sword is drawn from a metal scabbard, clean scrape and slight ring."
+    },
+    {
+      "id": "weapons_02",
+      "category": "weapons",
+      "prompt": "A wooden bowstring releases one arrow, twang and fast air rush."
+    },
+    {
+      "id": "weapons_03",
+      "category": "weapons",
+      "prompt": "A laser blaster fires one short pulse, sharp futuristic zap."
+    },
+    {
+      "id": "weapons_04",
+      "category": "weapons",
+      "prompt": "A heavy cannon fires once at a distance, bass report and trailing echo."
+    },
+    {
+      "id": "weapons_05",
+      "category": "weapons",
+      "prompt": "A metal shield blocks a sword blow, clang and brief rattle."
+    },
+    {
+      "id": "footsteps_01",
+      "category": "footsteps",
+      "prompt": "One person walks five steps on dry gravel outdoors, natural pace."
+    },
+    {
+      "id": "footsteps_02",
+      "category": "footsteps",
+      "prompt": "Leather boots walk across a hollow wooden floor, rhythmic creaks."
+    },
+    {
+      "id": "footsteps_03",
+      "category": "footsteps",
+      "prompt": "Sneakers run over wet pavement, quick splashes and sole taps."
+    },
+    {
+      "id": "footsteps_04",
+      "category": "footsteps",
+      "prompt": "Heavy armored footsteps approach on concrete, weighty clanks."
+    },
+    {
+      "id": "footsteps_05",
+      "category": "footsteps",
+      "prompt": "Bare feet take several steps on soft sand, quiet grain movement."
+    },
+    {
+      "id": "vehicles_01",
+      "category": "vehicles",
+      "prompt": "An electric car accelerates past the microphone on a city street."
+    },
+    {
+      "id": "vehicles_02",
+      "category": "vehicles",
+      "prompt": "A motorcycle engine starts, idles briefly, then revs once."
+    },
+    {
+      "id": "vehicles_03",
+      "category": "vehicles",
+      "prompt": "A train passes over rail joints, rolling rumble and rhythmic clacks."
+    },
+    {
+      "id": "vehicles_04",
+      "category": "vehicles",
+      "prompt": "A helicopter flies overhead, rotor chop rising then fading."
+    },
+    {
+      "id": "vehicles_05",
+      "category": "vehicles",
+      "prompt": "A bicycle brakes sharply on asphalt, rubber squeal and chain click."
+    },
+    {
+      "id": "machinery_01",
+      "category": "machinery",
+      "prompt": "A factory conveyor starts up, belt motor hum and rolling mechanisms."
+    },
+    {
+      "id": "machinery_02",
+      "category": "machinery",
+      "prompt": "A hydraulic press descends and compresses metal once, hiss and deep strain."
+    },
+    {
+      "id": "machinery_03",
+      "category": "machinery",
+      "prompt": "An old mechanical clock ticks steadily with a quiet gear movement."
+    },
+    {
+      "id": "machinery_04",
+      "category": "machinery",
+      "prompt": "A power drill spins up, drills briefly into wood, then stops."
+    },
+    {
+      "id": "machinery_05",
+      "category": "machinery",
+      "prompt": "A heavy elevator mechanism starts and travels, motor and cable vibration."
+    },
+    {
+      "id": "ui_01",
+      "category": "ui",
+      "prompt": "A soft digital confirmation chime with two notes, clean and short."
+    },
+    {
+      "id": "ui_02",
+      "category": "ui",
+      "prompt": "A clear warning alert pulse, urgent but not harsh, no speech."
+    },
+    {
+      "id": "ui_03",
+      "category": "ui",
+      "prompt": "A tactile menu selection click, polished and very brief."
+    },
+    {
+      "id": "ui_04",
+      "category": "ui",
+      "prompt": "A game achievement notification, bright layered chime and short tail."
+    },
+    {
+      "id": "ui_05",
+      "category": "ui",
+      "prompt": "A failed action UI sound, muted low blip with a quick downward pitch."
+    },
+    {
+      "id": "whooshes_01",
+      "category": "whooshes",
+      "prompt": "A fast sword swing passes close to the microphone, airy whoosh."
+    },
+    {
+      "id": "whooshes_02",
+      "category": "whooshes",
+      "prompt": "A cinematic transition sweeps left to right with a rising airy rush."
+    },
+    {
+      "id": "whooshes_03",
+      "category": "whooshes",
+      "prompt": "A large wing flaps past, broad fabric-like air movement."
+    },
+    {
+      "id": "whooshes_04",
+      "category": "whooshes",
+      "prompt": "A small object zips through air, short high-pitched pass-by."
+    },
+    {
+      "id": "whooshes_05",
+      "category": "whooshes",
+      "prompt": "A reversed airy swell builds and cuts abruptly to silence."
+    },
+    {
+      "id": "scifi_01",
+      "category": "scifi",
+      "prompt": "A spacecraft hatch opens with pneumatic hiss and servo whine."
+    },
+    {
+      "id": "scifi_02",
+      "category": "scifi",
+      "prompt": "An alien scanner sweeps once, oscillating electronic tones."
+    },
+    {
+      "id": "scifi_03",
+      "category": "scifi",
+      "prompt": "A robot powers on, motor clicks followed by a soft electric hum."
+    },
+    {
+      "id": "scifi_04",
+      "category": "scifi",
+      "prompt": "A teleportation device activates, shimmering rise and sudden snap."
+    },
+    {
+      "id": "scifi_05",
+      "category": "scifi",
+      "prompt": "A plasma field crackles continuously with irregular electrical sparks."
+    },
+    {
+      "id": "horror_01",
+      "category": "horror",
+      "prompt": "A distant wooden floorboard creaks slowly in an empty house."
+    },
+    {
+      "id": "horror_02",
+      "category": "horror",
+      "prompt": "An eerie low drone swells beneath faint metallic scraping, no music."
+    },
+    {
+      "id": "horror_03",
+      "category": "horror",
+      "prompt": "A creature breathes close by in darkness, rough and unsettling, no words."
+    },
+    {
+      "id": "horror_04",
+      "category": "horror",
+      "prompt": "A rusty gate moves slowly, long squeal and chain rattle."
+    },
+    {
+      "id": "horror_05",
+      "category": "horror",
+      "prompt": "A sudden sharp sting with distorted scrape and quick decay."
+    },
+    {
+      "id": "creatures_01",
+      "category": "creatures",
+      "prompt": "A large dragon growls once, deep throat rumble and breath."
+    },
+    {
+      "id": "creatures_02",
+      "category": "creatures",
+      "prompt": "A small fantasy creature chirps and scurries over leaves."
+    },
+    {
+      "id": "creatures_03",
+      "category": "creatures",
+      "prompt": "A wolf howls at a distance in a quiet forest."
+    },
+    {
+      "id": "creatures_04",
+      "category": "creatures",
+      "prompt": "A giant insect buzzes past the microphone with rapid wings."
+    },
+    {
+      "id": "creatures_05",
+      "category": "creatures",
+      "prompt": "A horse snorts and stamps one hoof in a stable."
+    },
+    {
+      "id": "nature_01",
+      "category": "nature",
+      "prompt": "Wind rustles dry leaves in a forest, gentle continuous ambience."
+    },
+    {
+      "id": "nature_02",
+      "category": "nature",
+      "prompt": "A flock of small birds calls at dawn, layered but distinct."
+    },
+    {
+      "id": "nature_03",
+      "category": "nature",
+      "prompt": "A branch snaps under tension and falls through foliage."
+    },
+    {
+      "id": "nature_04",
+      "category": "nature",
+      "prompt": "Crickets chirp steadily in a warm summer field."
+    },
+    {
+      "id": "nature_05",
+      "category": "nature",
+      "prompt": "A bee buzzes near flowers and recedes into the distance."
+    },
+    {
+      "id": "weather_01",
+      "category": "weather",
+      "prompt": "Heavy rain strikes a metal roof with a steady dense texture."
+    },
+    {
+      "id": "weather_02",
+      "category": "weather",
+      "prompt": "A single thunderclap cracks overhead and rolls into distance."
+    },
+    {
+      "id": "weather_03",
+      "category": "weather",
+      "prompt": "Strong gusts whistle through a narrow window gap."
+    },
+    {
+      "id": "weather_04",
+      "category": "weather",
+      "prompt": "Hailstones hit a car windshield in irregular bursts."
+    },
+    {
+      "id": "weather_05",
+      "category": "weather",
+      "prompt": "Light snowfall ambience with soft wind and distant quiet, no music."
+    },
+    {
+      "id": "water_01",
+      "category": "water",
+      "prompt": "A single drop lands in a still pool with a clear plink."
+    },
+    {
+      "id": "water_02",
+      "category": "water",
+      "prompt": "A river flows over shallow rocks, steady bubbling current."
+    },
+    {
+      "id": "water_03",
+      "category": "water",
+      "prompt": "A large wave breaks on a rocky shore and withdraws."
+    },
+    {
+      "id": "water_04",
+      "category": "water",
+      "prompt": "Water pours from a bottle into a glass, close clean recording."
+    },
+    {
+      "id": "water_05",
+      "category": "water",
+      "prompt": "A person splashes through a puddle once, short wet burst."
+    },
+    {
+      "id": "fire_01",
+      "category": "fire",
+      "prompt": "A campfire crackles steadily with small wood pops."
+    },
+    {
+      "id": "fire_02",
+      "category": "fire",
+      "prompt": "A match strikes and ignites with a brief flare."
+    },
+    {
+      "id": "fire_03",
+      "category": "fire",
+      "prompt": "A flamethrower releases a short roaring burst, then dies away."
+    },
+    {
+      "id": "fire_04",
+      "category": "fire",
+      "prompt": "A torch burns in a stone corridor, soft fluttering flame."
+    },
+    {
+      "id": "fire_05",
+      "category": "fire",
+      "prompt": "A large bonfire flares up with rising roar and snapping wood."
+    },
+    {
+      "id": "ambience_01",
+      "category": "ambience",
+      "prompt": "A busy indoor cafe with indistinct chatter, dishes, and room tone, no intelligible words."
+    },
+    {
+      "id": "ambience_02",
+      "category": "ambience",
+      "prompt": "An empty underground parking garage hums with ventilation and distant traffic."
+    },
+    {
+      "id": "ambience_03",
+      "category": "ambience",
+      "prompt": "A quiet library room tone with faint page turns and chair movement."
+    },
+    {
+      "id": "ambience_04",
+      "category": "ambience",
+      "prompt": "A crowded stadium ambience with distant cheering, no distinct speech."
+    },
+    {
+      "id": "ambience_05",
+      "category": "ambience",
+      "prompt": "An industrial harbor ambience with ship horns, gulls, and low machinery."
+    },
+    {
+      "id": "household_01",
+      "category": "household",
+      "prompt": "A kitchen drawer opens and closes with utensils rattling."
+    },
+    {
+      "id": "household_02",
+      "category": "household",
+      "prompt": "A glass bottle is set down on a wooden table, clear contact sound."
+    },
+    {
+      "id": "household_03",
+      "category": "household",
+      "prompt": "A washing machine begins its spin cycle, motor and drum vibration."
+    },
+    {
+      "id": "household_04",
+      "category": "household",
+      "prompt": "A key turns in a door lock followed by a firm latch click."
+    },
+    {
+      "id": "household_05",
+      "category": "household",
+      "prompt": "A kettle comes to a boil and switches off, steam and mechanical click."
+    },
+    {
+      "id": "industrial_01",
+      "category": "industrial",
+      "prompt": "A steel chain is dragged across a concrete factory floor."
+    },
+    {
+      "id": "industrial_02",
+      "category": "industrial",
+      "prompt": "A welding arc sparks in short bursts with electrical crackle."
+    },
+    {
+      "id": "industrial_03",
+      "category": "industrial",
+      "prompt": "A forklift raises a pallet, hydraulic whine and metal vibration."
+    },
+    {
+      "id": "industrial_04",
+      "category": "industrial",
+      "prompt": "A large ventilation fan spins up in an industrial hall."
+    },
+    {
+      "id": "industrial_05",
+      "category": "industrial",
+      "prompt": "A metal shipping container door rolls open, heavy rattling scrape."
+    },
+    {
+      "id": "destruction_01",
+      "category": "destruction",
+      "prompt": "A brick wall collapses into rubble, multiple hard impacts and dust."
+    },
+    {
+      "id": "destruction_02",
+      "category": "destruction",
+      "prompt": "A large pane of glass breaks and fragments scatter on tile."
+    },
+    {
+      "id": "destruction_03",
+      "category": "destruction",
+      "prompt": "A wooden crate is smashed open, splinters and hollow impacts."
+    },
+    {
+      "id": "destruction_04",
+      "category": "destruction",
+      "prompt": "Concrete cracks under pressure then breaks with a heavy crash."
+    },
+    {
+      "id": "destruction_05",
+      "category": "destruction",
+      "prompt": "A metal structure buckles and falls, groaning beams and final impact."
+    },
+    {
+      "id": "magic_01",
+      "category": "magic",
+      "prompt": "A magic wand casts a brief sparkling spell, bright chimes and airy shimmer."
+    },
+    {
+      "id": "magic_02",
+      "category": "magic",
+      "prompt": "An enchanted portal opens with layered swirling tones and low energy hum."
+    },
+    {
+      "id": "magic_03",
+      "category": "magic",
+      "prompt": "A healing spell blooms softly, warm glassy notes and gentle pulse."
+    },
+    {
+      "id": "magic_04",
+      "category": "magic",
+      "prompt": "A dark curse strikes with a distorted burst and ominous short tail."
+    },
+    {
+      "id": "magic_05",
+      "category": "magic",
+      "prompt": "A fairy creature flutters past leaving tiny crystalline sparkles."
+    }
+  ]
+}

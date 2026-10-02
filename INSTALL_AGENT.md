@@ -55,6 +55,8 @@ uv run --frozen python install/bootstrap.py --doctor
 ```
 
 Review the selected backend, actual paths, readiness and warnings. `--doctor` must work without network access.
+File readiness is not a generation test. Inspect the separate `readiness`
+fields; model checksums, dependency health and inference are not tested by doctor.
 
 ## 5. Install the Stable Audio runtime and models
 
@@ -97,6 +99,9 @@ Register a stdio MCP server named `agent-audio`:
 - Persist `AGENT_AUDIO_HOME` in new entries. Set a 600-second tool timeout for new Codex entries.
 
 Do not duplicate a matching registration. Legacy entries without `-I`, or entries pointing to a different installation, are reported as conflicts. Review the existing Agent Audio entry and migrate according to the user's instructions. Do not change unrelated settings or Skills.
+Read every per-client Skill and MCP outcome. Independent registration continues
+after a conflict, but a partial failure returns `success: false` and exit code 1.
+Report partial successes and remaining conflicts explicitly.
 
 ## 7. Reload clients only when needed
 

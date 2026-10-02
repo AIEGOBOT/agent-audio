@@ -1,11 +1,17 @@
 import subprocess
 import sys
 import wave
+import zipfile
 from pathlib import Path
 
 import pytest
 
 from agent_audio import runtime
+
+
+def test_runtime_rejects_unsupported_backend_before_install():
+    with pytest.raises(ValueError, match="Unsupported backend"):
+        runtime.install_runtime("xpu")
 
 
 def test_wrapper_alone_is_not_a_ready_runtime(tmp_path, monkeypatch):
@@ -15,6 +21,20 @@ def test_wrapper_alone_is_not_a_ready_runtime(tmp_path, monkeypatch):
     for name in ("sa3", "sa3.bat", "sa3.ps1"):
         (folder / name).write_text("wrapper only")
     assert not runtime.backend_ready("tflite")
+
+
+def test_mlx_runtime_does_not_require_tflite_tokenizer(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENT_AUDIO_HOME", str(tmp_path))
+    monkeypatch.setattr(runtime, "_venv_ready", lambda backend: backend == "mlx")
+    folder = runtime.runtime_paths().upstream / "optimized" / "mlx"
+    (folder / "scripts").mkdir(parents=True)
+    (folder / "scripts" / "sa3_mlx.py").write_text("# runtime entry point")
+    for path in runtime._model_paths("mlx"):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(path, "w") as archive:
+            archive.writestr("test.npy", b"model fixture")
+    assert not (folder / "models" / "tokenizer.model").exists()
+    assert runtime.backend_ready("mlx")
 
 
 def test_generation_logs_do_not_corrupt_mcp_stdout(tmp_path, monkeypatch, capfd):
@@ -34,7 +54,56 @@ def test_generation_logs_do_not_corrupt_mcp_stdout(tmp_path, monkeypatch, capfd)
     runtime.generate_audio("unit test", 3, str(tmp_path / "test.wav"))
     captured = capfd.readouterr()
     assert "runtime diagnostic" not in captured.out
-    assert "runtime diagnostic" in captured.err
+    assert "runtime diagnostic" not in captured.err
+    assert not list((tmp_path / "logs").glob("*.log"))
+
+
+def test_inference_does_not_inherit_closed_stderr_pipe(tmp_path, monkeypatch):
+    import os
+
+    from agent_audio.process import run_inference
+
+    read_fd, write_fd = os.pipe()
+    os.close(read_fd)
+    with os.fdopen(write_fd, "w") as broken_stderr:
+        with monkeypatch.context() as patch:
+            patch.setattr(sys, "stderr", broken_stderr)
+            run_inference(
+                [
+                    sys.executable,
+                    "-c",
+                    "import sys; print('done'); print('diagnostic', file=sys.stderr)",
+                ],
+                tmp_path,
+                runtime.runtime_environment(),
+                10,
+                log_dir=tmp_path / "logs",
+            )
+    assert not list((tmp_path / "logs").glob("*.log"))
+
+
+def test_failed_inference_keeps_private_log_without_echoing_prompt(tmp_path):
+    from agent_audio.process import run_inference
+
+    prompt = "private prompt text"
+    with pytest.raises(RuntimeError, match="exit code 7") as error:
+        run_inference(
+            [
+                sys.executable,
+                "-c",
+                "import sys; print(sys.argv[1]); sys.exit(7)",
+                prompt,
+            ],
+            tmp_path,
+            runtime.runtime_environment(),
+            10,
+            log_dir=tmp_path / "logs",
+        )
+    assert prompt not in str(error.value)
+    logs = list((tmp_path / "logs").glob("*.log"))
+    assert len(logs) == 1
+    assert prompt in logs[0].read_text()
+    assert str(logs[0]) in str(error.value)
 
 
 def test_model_cache_cannot_reuse_an_unrelated_hf_cache(tmp_path, monkeypatch):
@@ -152,7 +221,7 @@ def test_prompt_metacharacters_are_literal_and_raced_output_is_preserved(
     destination = tmp_path / "out.wav"
     prompt = '-n " & echo INJECTED | %PATH% ; $(touch marker)'
 
-    def render(command, cwd, env, timeout):
+    def render(command, cwd, env, timeout, log_dir):
         assert f"--prompt={prompt}" in command
         assert env["HF_HUB_OFFLINE"] == "1"
         path = command[command.index("--out") + 1]

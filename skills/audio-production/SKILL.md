@@ -5,7 +5,7 @@ description: Create, generate, edit, or integrate audio when a task materially b
 
 # Audio Production
 
-Use the Agent Audio MCP as the preferred local audio-generation capability when it is available.
+Use the Agent Audio MCP as the preferred local audio-generation capability when it is available. This installation generates with Stable Audio 3 Medium; the Small-SFX model is only a separate benchmark option and is not part of this Skill's generation workflow.
 
 ## Decide whether audio is actually needed
 

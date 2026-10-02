@@ -119,6 +119,9 @@ MCP registrations retain it. The MCP application uses the repository's `.venv`;
 the runtime uses its own `optimized/<backend>/.venv`.
 
 Conflicting Skills, runtime checkouts and MCP entries are preserved and reported.
+Registration returns per-client Skill and MCP outcomes. Independent clients
+continue after a conflict; `success: false` and exit code 1 indicate partial
+failure. Review the reported outcomes before treating installation as complete.
 Legacy MCP entries without Python's `-I` need a reviewed migration. Runtime and
 model revisions are pinned; TFLite model downloads also use SHA-256 verification.
 See [security boundaries](SECURITY.md) for limitations and configuration handling.
@@ -149,6 +152,13 @@ new `.wav` path. Existing outputs are never overwritten. The output filesystem
 must support hardlinks. Duration must be greater than zero and at most 380
 seconds; long CPU requests may exceed the 540-second inference timeout.
 
+`runtime_ready` checks prerequisite files and model headers, not successful
+inference. The `readiness` object separately reports upstream checkout
+verification and checks that were not performed (model checksums, dependency
+health and generation). `capabilities.negative_prompt` is currently false:
+nonempty negative prompts are rejected because both pinned backends ignore them
+with the current CFG 1.0 policy. Describe the desired sound in `prompt` instead.
+
 Example arguments for a 3-second effect:
 
 ```json
@@ -161,6 +171,10 @@ Example arguments for a 3-second effect:
 These two MCP tools do not expose every capability of the upstream model.
 
 ## Development checks
+
+For the separate Small-SFX versus Medium SFX comparison runner, see the
+[benchmark guide](benchmarks/sfx_model_compare/README.md). It uses an isolated
+TFLite runtime and keeps generated WAVs outside Git.
 
 These checks do not require model weights. Doctor also works offline.
 
@@ -201,6 +215,10 @@ agent-audio/
 ├─ tests/
 └─ .github/workflows/
 ```
+
+Stable Audio backend details live in `src/agent_audio/backends.py`; runtime
+orchestration, process cleanup and filesystem publication stay separate from
+the generic MCP tools. See [architecture](ARCHITECTURE.md) for these boundaries.
 
 ## License
 

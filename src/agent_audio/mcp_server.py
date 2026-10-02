@@ -40,6 +40,8 @@ def generate_audio(
 
     Use for music, sound effects, ambience, UI sounds, transitions and general media audio.
     The caller should choose a meaningful output path when integrating into a project.
+    The current backends reject nonempty negative_prompt; use prompt to describe
+    the desired sound. audio_status reports capabilities and readiness check scope.
     """
     path: Path = _generate_audio(
         prompt=prompt,

@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import os
 import shutil
+import tempfile
 from pathlib import Path
 
 MODEL_REPO = "stabilityai/stable-audio-3-optimized"
@@ -16,6 +17,10 @@ TFLITE_SHA256 = {
     "same-l/dec_w8a8.tflite": "53dbca41ec9620257834bda4f3008a2cd5072afba564b84906f8ffdfca2647e7",
     "same-l/enc_w8a8.tflite": "9c76149a2fe6bd461fadf2a45b675fcd4bc64a26bd2f1d24810098a169cc41ec",
     "t5gemma/encoder_fp16.tflite": "8530d0b3e6b9b9dcf1239145c2a853fb749708eaddbb472ff8f0802b50059372",
+}
+TFLITE_BENCHMARK_SHA256 = {
+    "sa3-sm-sfx/dit_fp32.tflite": "6060ecfeca34c4ab35bc1912a37e680e8cd7aab6c4bd9de1bc2655414891b8d8",
+    "same-s/dec_w8a8.tflite": "90cad5ef81e6b18eb205012aee03bc53ed59e1c17033b79a84a4612674b1e03a",
 }
 MLX_FILES = (
     "dit_medium_f16.npz",
@@ -30,10 +35,16 @@ def digest(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def download(backend: str, root: Path, cache: Path) -> None:
+def download(
+    backend: str, root: Path, cache: Path, *, benchmark_small: bool = False
+) -> None:
     from huggingface_hub import hf_hub_download
 
     manifest = TFLITE_SHA256 if backend == "tflite" else dict.fromkeys(MLX_FILES)
+    if benchmark_small:
+        if backend != "tflite":
+            raise ValueError("Small-SFX benchmark download currently requires TFLite")
+        manifest = TFLITE_BENCHMARK_SHA256
     prefix = "tflite" if backend == "tflite" else "MLX"
     for name, expected in manifest.items():
         target = root / "models" / backend / name
@@ -65,9 +76,27 @@ def download(backend: str, root: Path, cache: Path) -> None:
                 f"Model appeared during installation: {target}"
             ) from None
         except OSError:
-            # Cross-device caches can copy without overwriting an existing target.
-            with cached.open("rb") as source, target.open("xb") as destination:
-                shutil.copyfileobj(source, destination)
+            # Stage on the target volume: an interrupted copy must never become
+            # an existing, conflicting model. Publication remains exclusive.
+            fd, temporary = tempfile.mkstemp(
+                prefix=".agent-audio-model-", dir=target.parent
+            )
+            staged = Path(temporary)
+            try:
+                with os.fdopen(fd, "wb") as destination, cached.open("rb") as source:
+                    shutil.copyfileobj(source, destination)
+                    destination.flush()
+                    os.fsync(destination.fileno())
+                if digest(staged) != actual:
+                    raise RuntimeError(f"Copied model checksum mismatch: {name}")
+                try:
+                    os.link(staged, target)
+                except FileExistsError:
+                    raise RuntimeError(
+                        f"Model appeared during installation: {target}"
+                    ) from None
+            finally:
+                staged.unlink(missing_ok=True)
         print(f"Verified {target} ({target.stat().st_size} bytes)", flush=True)
 
 
@@ -76,8 +105,9 @@ def main() -> None:
     parser.add_argument("--backend", choices=("tflite", "mlx"), required=True)
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--cache", type=Path, required=True)
+    parser.add_argument("--benchmark-small", action="store_true")
     args = parser.parse_args()
-    download(args.backend, args.root, args.cache)
+    download(args.backend, args.root, args.cache, benchmark_small=args.benchmark_small)
 
 
 if __name__ == "__main__":

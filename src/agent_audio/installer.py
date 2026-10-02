@@ -59,6 +59,7 @@ def _tree_bytes(folder: Path) -> dict[str, bytes]:
 def _copy_skill(destination_root: Path) -> Path:
     source = repo_root() / "skills" / SKILL_NAME
     destination = destination_root / SKILL_NAME
+    reject_link(destination_root.parent)
     reject_link(destination_root)
     with file_lock(destination):
         reject_link(destination)
@@ -82,18 +83,24 @@ def _copy_skill(destination_root: Path) -> Path:
     return destination
 
 
-def install_skills() -> dict[str, str]:
+def install_skills() -> dict[str, dict[str, str]]:
     info = detect_environment()
     clients = (
         ("codex", info.codex_installed, ".agents"),
         ("claude", info.claude_installed, ".claude"),
         ("cursor", info.cursor_installed, ".cursor"),
     )
-    return {
-        name: str(_copy_skill(Path.home() / folder / "skills"))
-        for name, installed, folder in clients
-        if installed
-    }
+    outcomes = {}
+    for name, installed, folder in clients:
+        if not installed:
+            outcomes[name] = {"status": "not-installed"}
+            continue
+        try:
+            path = _copy_skill(Path.home() / folder / "skills")
+            outcomes[name] = {"status": "installed", "path": str(path)}
+        except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as exc:
+            outcomes[name] = {"status": "error", "error": str(exc)}
+    return outcomes
 
 
 def _desired(python: Path) -> dict[str, object]:
@@ -237,6 +244,7 @@ def _timeout_text(text: str, entry: dict[str, object]) -> str:
 
 def _configure_codex_timeout(python: Path) -> None:
     config = _codex_config()
+    reject_link(config.parent)
     with file_lock(config):
         raw = read_optional(config)
         if raw is None:
@@ -255,11 +263,15 @@ def _register_codex(python: Path) -> str:
     if not binary:
         return "not-installed"
     config = _codex_config()
+    reject_link(config.parent)
     with file_lock(config):
         raw = read_optional(config)
         text = (raw or b"").decode("utf-8-sig")
         data = tomllib.loads(text)
-        existing = data.get("mcp_servers", {}).get(MCP_NAME)
+        servers = data.get("mcp_servers", {})
+        if not isinstance(servers, dict):
+            raise RuntimeError(f"Invalid MCP config object; preserved {config}")
+        existing = servers.get(MCP_NAME)
         if _check_existing(existing, _desired(python)):
             updated = _timeout_text(text, existing)
             result = "already-registered"
@@ -289,6 +301,7 @@ def _register_codex(python: Path) -> str:
 def _register_json(
     config: Path, python: Path, native: tuple[str, str] | None = None
 ) -> str:
+    reject_link(config.parent)
     with file_lock(config):
         raw = read_optional(config)
         try:
@@ -339,14 +352,26 @@ def _register_cursor(python: Path) -> str:
 
 def register_agents() -> dict[str, object]:
     python = _venv_python()
+    skills = install_skills()
+    mcp = {}
+    for name, register in (
+        ("codex", _register_codex),
+        ("claude", _register_claude),
+        ("cursor", _register_cursor),
+    ):
+        try:
+            mcp[name] = {"status": register(python)}
+        except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as exc:
+            mcp[name] = {"status": "error", "error": str(exc)}
     return {
         "python": str(python),
-        "skills": install_skills(),
-        "mcp": {
-            "codex": _register_codex(python),
-            "claude": _register_claude(python),
-            "cursor": _register_cursor(python),
-        },
+        "skills": skills,
+        "mcp": mcp,
+        "success": all(
+            outcome["status"] != "error"
+            for group in (skills, mcp)
+            for outcome in group.values()
+        ),
     }
 
 
@@ -380,5 +405,6 @@ def perform_install(runtime: bool = True, register: bool = True) -> dict[str, ob
         result["runtime_backend"] = install_runtime()
     if register:
         result["registration"] = register_agents()
+        result["success"] = result["registration"]["success"]
     result["doctor_after"] = doctor()
     return result

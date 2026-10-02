@@ -27,9 +27,24 @@ def test_real_stdio_status_and_input_rejection(tmp_path):
                 status = await session.call_tool("audio_status", {})
                 assert not status.isError
                 assert status.structuredContent["runtime_ready"] is False
+                assert (
+                    status.structuredContent["capabilities"]["negative_prompt"] is False
+                )
+                assert (
+                    status.structuredContent["readiness"]["generation"] == "not_checked"
+                )
                 result = await session.call_tool(
                     "generate_audio", {"prompt": "test", "seconds": 0}
                 )
                 assert result.isError
+                rejected = await session.call_tool(
+                    "generate_audio",
+                    {"prompt": "impact", "seconds": 3, "negative_prompt": "music"},
+                )
+                assert rejected.isError
+                assert any(
+                    "negative_prompt is unsupported" in getattr(block, "text", "")
+                    for block in rejected.content
+                )
 
     asyncio.run(probe())

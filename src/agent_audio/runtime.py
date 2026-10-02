@@ -9,18 +9,17 @@ import sys
 import tempfile
 import uuid
 import wave
-import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from .backends import get_backend
 from .detect import detect_environment, recommended_backend
-from .download_models import MLX_FILES, MODEL_REVISION, TFLITE_SHA256
+from .download_models import MODEL_REVISION
 from .process import run_inference
 from .storage import file_lock, reject_link
 
 UPSTREAM_REPO = "https://github.com/Stability-AI/stable-audio-3.git"
 UPSTREAM_REVISION = "779434a908193105335fd8d833418603625b2859"
-TFLITE_MEDIUM_FILES = tuple(TFLITE_SHA256)
 GENERATION_TIMEOUT = 540  # Leave room for MCP transport within Codex's 600 seconds.
 
 
@@ -70,9 +69,7 @@ def runtime_environment() -> dict[str, str]:
 
 
 def _backend_folder(backend: str) -> Path:
-    if backend not in {"tflite", "mlx"}:
-        raise ValueError(f"Unsupported backend: {backend}")
-    return runtime_paths().upstream / "optimized" / backend
+    return runtime_paths().upstream / "optimized" / get_backend(backend).name
 
 
 def runtime_python(backend: str) -> Path:
@@ -85,11 +82,19 @@ def runtime_python(backend: str) -> Path:
 
 
 def _model_paths(backend: str) -> list[Path]:
-    names = TFLITE_MEDIUM_FILES if backend == "tflite" else MLX_FILES
+    names = get_backend(backend).model_files
     return [_backend_folder(backend) / "models" / backend / name for name in names]
 
 
 def runtime_details(backend: str) -> dict[str, object]:
+    upstream = runtime_paths().upstream
+    provenance = "missing"
+    if upstream.exists():
+        try:
+            verify_upstream_checkout(upstream)
+            provenance = "verified"
+        except (OSError, RuntimeError, subprocess.SubprocessError):
+            provenance = "invalid"
     return {
         "runtime_python": str(runtime_python(backend)),
         "model": "stable-audio-3-medium",
@@ -97,6 +102,14 @@ def runtime_details(backend: str) -> dict[str, object]:
         "model_cache": runtime_environment()["HF_HUB_CACHE"],
         "runtime_revision": UPSTREAM_REVISION,
         "model_revision": MODEL_REVISION,
+        "capabilities": {"negative_prompt": False},
+        "readiness": {
+            "scope": "files_and_headers",
+            "upstream_checkout": provenance,
+            "model_checksums": "not_checked",
+            "runtime_dependencies": "not_checked",
+            "generation": "not_checked",
+        },
     }
 
 
@@ -183,8 +196,9 @@ def _venv_ready(backend: str) -> bool:
         return False
 
 
-def install_runtime() -> str:
-    backend = recommended_backend(detect_environment())
+def install_runtime(backend: str | None = None) -> str:
+    backend = backend or recommended_backend(detect_environment())
+    get_backend(backend)
     with file_lock(runtime_paths().upstream):
         ensure_upstream_checkout()
         folder = _backend_folder(backend)
@@ -252,10 +266,11 @@ def install_runtime() -> str:
 
 def backend_ready(backend: str | None = None) -> bool:
     backend = backend or recommended_backend(detect_environment())
+    adapter = get_backend(backend)
     folder = _backend_folder(backend)
     if (
         not _venv_ready(backend)
-        or not (folder / "scripts" / f"sa3_{backend}.py").is_file()
+        or not (folder / "scripts" / adapter.script_name).is_file()
     ):
         return False
     try:
@@ -266,15 +281,16 @@ def backend_ready(backend: str | None = None) -> bool:
                 data_root().resolve()
             ):
                 return False
-            if backend == "tflite":
-                with path.open("rb") as model:
-                    if model.read(8)[4:8] != b"TFL3":
-                        return False
-            elif not zipfile.is_zipfile(path):
+            if not adapter.model_header_valid(path):
                 return False
     except OSError:
         return False
-    return (folder / "models" / "tokenizer.model").is_file()
+    # TFLite ships a separate tokenizer.model. MLX embeds tokenizer bytes in
+    # t5gemma_f16.npz, so requiring the TFLite file would reject a ready Mac runtime.
+    return (
+        not adapter.requires_tokenizer
+        or (folder / "models" / "tokenizer.model").is_file()
+    )
 
 
 def _runtime_command(backend: str) -> tuple[list[str], Path]:
@@ -283,7 +299,7 @@ def _runtime_command(backend: str) -> tuple[list[str], Path]:
     return [
         str(runtime_python(backend)),
         "-I",
-        str(folder / "scripts" / f"sa3_{backend}.py"),
+        str(folder / "scripts" / get_backend(backend).script_name),
     ], folder
 
 
@@ -319,6 +335,8 @@ def generate_audio(
     if not math.isfinite(seconds) or seconds <= 0 or seconds > 380:
         raise ValueError("seconds must be finite, > 0 and <= 380")
     backend = recommended_backend(detect_environment())
+    adapter = get_backend(backend)
+    adapter.validate_negative_prompt(negative_prompt)
     if not backend_ready(backend):
         raise RuntimeError(
             f"Stable Audio runtime is not ready for '{backend}'. Run the bootstrap installer first."
@@ -346,28 +364,24 @@ def generate_audio(
             temporary = Path(stage) / "audio.wav"
             command, cwd = _runtime_command(backend)
             # --flag=value keeps leading '-' prompt text from becoming another option.
-            command += [
-                f"--prompt={prompt}",
-                "--dit",
-                "medium",
-                "--decoder",
-                "same-l",
-                "--seconds",
-                str(seconds),
-                "--out",
-                str(temporary),
-            ]
-            if negative_prompt:
-                command += [f"--negative-prompt={negative_prompt}"]
+            command += adapter.generation_arguments(prompt, seconds, temporary)
             env = runtime_environment()
             env["HF_HUB_OFFLINE"] = (
                 "1"  # Generation never silently downloads another revision.
             )
             try:
-                run_inference(command, cwd, env, GENERATION_TIMEOUT)
+                run_inference(
+                    command,
+                    cwd,
+                    env,
+                    GENERATION_TIMEOUT,
+                    log_dir=paths.root / "logs",
+                )
             except subprocess.TimeoutExpired as exc:
+                log_path = getattr(exc, "log_path", None)
+                log_hint = f" See local log {log_path}." if log_path else ""
                 raise RuntimeError(
-                    f"Stable Audio generation exceeded {GENERATION_TIMEOUT} seconds and was stopped."
+                    f"Stable Audio generation exceeded {GENERATION_TIMEOUT} seconds and was stopped.{log_hint}"
                 ) from exc
             if not temporary.is_file():
                 raise RuntimeError("Runtime completed without producing a WAV.")
