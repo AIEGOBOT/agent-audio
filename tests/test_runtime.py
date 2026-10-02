@@ -14,6 +14,46 @@ def test_runtime_rejects_unsupported_backend_before_install():
         runtime.install_runtime("xpu")
 
 
+@pytest.mark.parametrize("backend", ["tflite", "mlx"])
+@pytest.mark.parametrize("existing_venv", [False, True])
+def test_runtime_install_prepares_socks_dependency_in_dedicated_venv(
+    tmp_path, monkeypatch, backend, existing_venv
+):
+    monkeypatch.setenv("AGENT_AUDIO_HOME", str(tmp_path))
+    monkeypatch.setenv("ALL_PROXY", "socks5://localhost:1080")
+    monkeypatch.setattr(runtime, "ensure_upstream_checkout", lambda: None)
+    monkeypatch.setattr(runtime, "_venv_ready", lambda _: True)
+    monkeypatch.setattr(runtime, "backend_ready", lambda _: True)
+    monkeypatch.setattr(runtime.shutil, "which", lambda _: "uv")
+    folder = runtime._backend_folder(backend)
+    if existing_venv:
+        (folder / ".venv").mkdir(parents=True)
+    calls = []
+    monkeypatch.setattr(
+        runtime.subprocess,
+        "run",
+        lambda command, **kwargs: calls.append((command, kwargs)),
+    )
+
+    assert runtime.install_runtime(backend) == backend
+    installs = [call for call in calls if call[0][:3] == ["uv", "pip", "install"]]
+    assert len(installs) == 1
+    command, kwargs = installs[0]
+    assert command == [
+        "uv",
+        "pip",
+        "install",
+        "--python",
+        str(runtime.runtime_python(backend)),
+        "-r",
+        str(folder / "requirements.txt"),
+        "socksio>=1,<2",
+    ]
+    assert kwargs["env"]["ALL_PROXY"] == "socks5://localhost:1080"
+    assert kwargs["check"] is True
+    assert any(call[0][:2] == ["uv", "venv"] for call in calls) is not existing_venv
+
+
 def test_wrapper_alone_is_not_a_ready_runtime(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENT_AUDIO_HOME", str(tmp_path))
     folder = runtime.runtime_paths().upstream / "optimized" / "tflite"

@@ -231,6 +231,8 @@ def install_runtime(backend: str | None = None) -> str:
                 str(python),
                 "-r",
                 str(folder / "requirements.txt"),
+                # HF's HTTP transport needs this extra for inherited SOCKS proxies.
+                "socksio>=1,<2",
             ],
             env=env,
             stdin=subprocess.DEVNULL,

@@ -49,11 +49,13 @@ def download(
     for name, expected in manifest.items():
         target = root / "models" / backend / name
         # Always resolve via the pinned revision, even when a local model exists.
+        # HF snapshots can be relative symlinks. Link the verified blob, not the
+        # symlink itself: relocating that symlink can break its relative target.
         cached = Path(
             hf_hub_download(
                 MODEL_REPO, f"{prefix}/{name}", revision=MODEL_REVISION, cache_dir=cache
             )
-        )
+        ).resolve(strict=True)
         actual = digest(cached)
         if expected and actual != expected:
             raise RuntimeError(f"Model checksum mismatch: {name}; refusing to install.")

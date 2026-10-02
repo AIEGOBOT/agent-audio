@@ -66,6 +66,15 @@ uv run --frozen python install/bootstrap.py --runtime-only
 
 The installer fetches Stability AI's official `stable-audio-3` runtime at a pinned commit into the dedicated Agent Audio data directory. The default is `~/.agent-audio`; set `AGENT_AUDIO_HOME` to choose another location. Models also use a pinned revision and a dedicated cache.
 
+The dedicated runtime also installs `socksio` for SOCKS support in current
+HTTPX-based Hugging Face clients. Existing proxy settings are preserved; the
+installer does not configure or bypass a proxy. This does not add SOCKS support
+to older, Requests-based Hugging Face clients retained in an existing venv.
+
+If an earlier Linux installation contains broken model symlinks, choose a new
+`AGENT_AUDIO_HOME`. The installer preserves conflicting existing paths rather
+than replacing them automatically.
+
 If model access requires authentication or license acceptance, stop at that step and ask the user to complete it. Resume only after the user has acted.
 
 ### Backend policy

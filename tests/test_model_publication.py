@@ -1,5 +1,6 @@
 import errno
 import hashlib
+import os
 import sys
 from types import SimpleNamespace
 
@@ -8,13 +9,21 @@ import pytest
 from agent_audio import download_models as models
 
 
-def fixture_download(tmp_path, monkeypatch):
+def fixture_download(tmp_path, monkeypatch, relative_link=False):
     cached = tmp_path / "cached"
     cached.write_bytes(b"verified weights")
+    snapshot = cached
+    if relative_link:
+        snapshot = tmp_path / "snapshot" / "model.tflite"
+        snapshot.parent.mkdir()
+        try:
+            snapshot.symlink_to(os.path.relpath(cached, snapshot.parent))
+        except (OSError, NotImplementedError):
+            pytest.skip("Creating symlinks is not supported on this host")
     monkeypatch.setitem(
         sys.modules,
         "huggingface_hub",
-        SimpleNamespace(hf_hub_download=lambda *args, **kwargs: str(cached)),
+        SimpleNamespace(hf_hub_download=lambda *args, **kwargs: str(snapshot)),
     )
     monkeypatch.setattr(
         models,
@@ -33,15 +42,22 @@ def fixture_download(tmp_path, monkeypatch):
     return cached, target
 
 
-def test_cross_device_copy_publishes_verified_complete_model(tmp_path, monkeypatch):
-    cached, target = fixture_download(tmp_path, monkeypatch)
+@pytest.mark.parametrize("relative_link", [False, True])
+def test_cross_device_copy_publishes_verified_complete_model(
+    tmp_path, monkeypatch, relative_link
+):
+    cached, target = fixture_download(tmp_path, monkeypatch, relative_link)
     models.download("tflite", tmp_path / "runtime", tmp_path)
     assert target.read_bytes() == cached.read_bytes()
+    assert not target.is_symlink()
     assert not list(target.parent.glob(".agent-audio-model-*"))
 
 
-def test_failed_copy_leaves_no_conflict_and_can_retry(tmp_path, monkeypatch):
-    cached, target = fixture_download(tmp_path, monkeypatch)
+@pytest.mark.parametrize("relative_link", [False, True])
+def test_failed_copy_leaves_no_conflict_and_can_retry(
+    tmp_path, monkeypatch, relative_link
+):
+    cached, target = fixture_download(tmp_path, monkeypatch, relative_link)
     original_copy = models.shutil.copyfileobj
 
     def interrupted(source, destination):
