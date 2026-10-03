@@ -31,10 +31,16 @@ Stability Matrix, or an existing Stable Audio environment.
 
 This repository is an early v0.1 release. Independent installation and real
 3-second, 44.1 kHz stereo WAV generation through MCP were verified on Windows
-using the TFLite/LiteRT CPU backend. Model-free CI passed on Windows, macOS and
-Linux, with 45 tests in each of five Python/OS combinations, plus dependency
-auditing and CodeQL. Real MLX generation still needs Apple hardware validation;
-model-free CI does not establish model inference support on every platform.
+using the TFLite/LiteRT CPU backend. A user-provided macOS installation report
+dated 2026-10-03 also records successful MLX generation of a 3-second WAV through
+a standalone stdio MCP client on an Apple M5 Pro with 24 GiB unified memory.
+See the [MLX validation record](docs/macos-mlx-validation.md) for the reported
+environment, results and evidence limits; direct generation from a fresh Codex
+chat and listening quality were not tested in that report.
+
+Model-free CI covers Windows, macOS and Linux, alongside dependency auditing
+and CodeQL. These checks do not establish model inference support on every
+platform.
 
 Working design targets:
 
@@ -80,9 +86,11 @@ the separate uv cache, base Python, external output folders and filesystem
 overhead. Disk GB is decimal; GiB is binary.
 
 Memory was measured on 2026-09-28 with an existing native cache and one 3-second
-request. It is not a first-run or long-generation maximum. Apple Silicon MLX
-storage and unified memory requirements need separate validation; do not apply
-the CPU numbers to MLX. See [measurement details](docs/resource-requirements.md).
+request. It is not a first-run or long-generation maximum. The macOS report
+records **6.88 GB (6.41 GiB)** of MLX model files and a successful short generation
+on a **24 GiB** host. Total MLX installation size and peak unified memory were
+not measured; this is not a minimum memory requirement. Do not apply the CPU
+numbers to MLX. See [measurement details](docs/resource-requirements.md).
 
 ## Manual developer setup
 
@@ -168,7 +176,9 @@ Example arguments for a 3-second effect:
 }
 ```
 
-These two MCP tools do not expose every capability of the upstream model.
+The current MCP generation tool accepts text and produces a WAV. Audio-to-audio
+editing, inpainting and continuation are upstream model capabilities, but are
+not exposed by these MCP tools.
 
 ## Development checks
 
@@ -200,6 +210,7 @@ See [third-party notices](THIRD_PARTY_NOTICES.md).
 - [Repository instructions](AGENTS.md): architecture rules and required checks.
 - [Security boundaries](SECURITY.md): configuration preservation and execution limits.
 - [Resource measurements](docs/resource-requirements.md): disk and memory guidance.
+- [macOS MLX validation](docs/macos-mlx-validation.md): user-reported installation and generation evidence.
 - [Third-party notices](THIRD_PARTY_NOTICES.md): separate model and runtime terms.
 
 ```text

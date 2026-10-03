@@ -68,6 +68,23 @@ The OS-maintained process peak counters were sampled before exit; a final change
 
 ## Upstream documentation and other environments
 
+### User-reported Apple Silicon MLX observation
+
+The [2026-10-03 macOS installation report](macos-mlx-validation.md) records
+successful Stable Audio 3 Medium generation on an Apple M5 Pro with 24 GiB
+unified memory. Four MLX model files total **6,883,369,494 bytes (6.88 GB /
+6.41 GiB)**. The reported 3-second generation took 8.02 seconds; timing scope
+and cache state were not recorded, so this is not a controlled comparison with
+the Windows observation above.
+
+The host had about 178 GiB free before installation. That is available capacity,
+not installation consumption or a disk recommendation. Runtime packages, caches
+and total installed storage were not measured. Neither peak unified memory nor
+minimum RAM was measured; successful short generation on 24 GiB does not
+establish requirements for smaller machines or longer outputs.
+
+### Upstream references
+
 The [official TFLite guide at the pinned commit](https://github.com/Stability-AI/stable-audio-3/blob/779434a908193105335fd8d833418603625b2859/optimized/tflite/README.md) explains CPU execution and file sizes by precision. The installation sizes here were measured for Agent Audio's four selected files and actual installation, rather than every upstream variant combined.
 
-The [official MLX memory measurements](https://github.com/Stability-AI/stable-audio-3/blob/779434a908193105335fd8d833418603625b2859/optimized/mlx/README.md#speed--memory) use different hardware, a different backend and model-release options. Add separate measurements here after validating actual MLX installation and generation through Agent Audio.
+The [official MLX memory measurements](https://github.com/Stability-AI/stable-audio-3/blob/779434a908193105335fd8d833418603625b2859/optimized/mlx/README.md#speed--memory) use different hardware, a different backend and model-release options. Agent Audio's reported MLX generation above does not yet include equivalent storage or peak-memory measurements.

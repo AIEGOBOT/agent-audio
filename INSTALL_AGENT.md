@@ -32,7 +32,7 @@ Check and record:
 - Python, `uv` and Git availability.
 - Total and currently available system RAM, and free disk space on the installation volume.
 
-Compare with the [disk and memory guidance](docs/resource-requirements.md) and report possible resource shortages before installation. For the Windows CPU configuration, recommend at least 25 GB of free disk space and a 32 GB class RAM system for planning. These are not verified minimum specs: do not promise success or failure on 8/16 GB systems. MLX needs separate validation. Never delete existing user files, models or caches to free space without authorization.
+Compare with the [disk and memory guidance](docs/resource-requirements.md) and report possible resource shortages before installation. For the Windows CPU configuration, recommend at least 25 GB of free disk space and a 32 GB class RAM system for planning. These are not verified minimum specs: do not promise success or failure on 8/16 GB systems. The [macOS MLX report](docs/macos-mlx-validation.md) records a short generation on a 24 GiB host and 6.41 GiB of model files, but no peak memory or total installation size measurement. Verify the current host separately. Never delete existing user files, models or caches to free space without authorization.
 
 Do not infer acceleration support from a GPU name alone. Do not start unrelated existing MCP servers during installation.
 
@@ -129,6 +129,13 @@ First call `audio_status` through MCP and inspect the runtime Python and model p
 
 Use the default output folder or a new path in a test directory. Verify WAV existence, nonzero size, duration and actual output path. Do not add test audio to the user's active project unless requested.
 
+Record the MCP client used for the test. A standalone stdio client verifies the
+server and generation path; it does not verify tool discovery or invocation in
+the registered application's fresh chat. Report those checks separately.
+Record sample rate, channel count and sample format. When inspecting samples,
+report silence, non-finite values and peak/RMS levels separately from a listening
+assessment. Valid WAV data alone does not establish prompt adherence or quality.
+
 ## 9. Report completion
 
 Report only verified facts:
@@ -139,5 +146,16 @@ Report only verified facts:
 - MCP call results and generated WAV path, size and duration.
 - Any fallback in use and anything not verified.
 - Configuration conflicts and steps requiring manual intervention.
+- Agent Audio commit, runtime/model pins, OS, hardware and dependency versions.
+- Whether results were observed directly or supplied in an external report.
+
+Keep reproducible test scripts and logs in the user's test directory, and report
+their paths. Share only reviewed, sanitized evidence: omit credentials, private
+configuration and personal paths from public documentation. Record whether
+timings include startup and model loading, and whether caches were warm; if
+unknown, say so rather than treating one run as a general performance benchmark.
 
 State unsupported functionality explicitly and preserve the verified working path.
+The current MCP exposes text-to-audio generation, not audio editing, inpainting
+or continuation. Distinguish those unavailable interfaces from supported
+operations whose duration or quality has not yet been tested.

@@ -36,9 +36,12 @@ This is a provenance check, not protection against a malicious local account
 that can rewrite Git metadata, dependencies or the server itself.
 
 Model downloads use an immutable Hugging Face revision in Agent Audio's private
-cache. TFLite files additionally have pinned SHA-256 checksums; MLX downloads are
-revision-pinned but have not had equivalent local hardware validation. Licenses
-and gated-model access remain user responsibilities; no acceptance is automated.
+cache. TFLite files additionally have pinned SHA-256 checksums. MLX downloads are
+revision-pinned and installed files are checked against the resolved cache
+content, but do not have independently pinned SHA-256 reference values. The
+[user-reported macOS generation test](docs/macos-mlx-validation.md) does not
+provide that independent checksum verification. Licenses and gated-model
+access remain user responsibilities; no acceptance is automated.
 When cache hardlinking fails, models are copied to a private staging file on the
 destination volume, verified and published without replacement. Interrupted
 copies do not occupy the final model path. The destination filesystem must
