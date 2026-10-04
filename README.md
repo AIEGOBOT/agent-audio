@@ -1,136 +1,181 @@
 # Agent Audio
 
-Local audio generation for AI coding agents, with an MCP server and an Agent Skill.
+**Give your coding agent local audio generation for games and videos.**
 
-Agent Audio is for creators building games and videos with coding agents who do
-not want to manage a separate audio-production workflow. It installs a dedicated
-local runtime without requiring ComfyUI, Stability Matrix, or an existing Stable
-Audio environment. Codex, Claude Code and Cursor are the initial client targets.
+Agent Audio provides an MCP server and an Agent Skill, without requiring ComfyUI
+or a paid audio-generation API. It installs its own runtime and uses Stable
+Audio 3 Medium to generate audio on your computer.
 
-## Goal
+Ask your agent to build or edit something, with useful sound effects handled
+as part of the task. The goal is to review the finished result, not manage a
+separate audio-production workflow.
 
-Let the agent complete the sound work as part of the requested deliverable:
+**Early preview (v0.1).** Short audio generation has been demonstrated in the
+[environments below](#current-status). Automatic use during game/video work and
+listening quality still need end-to-end validation.
 
-```text
-User gives a coding agent this repository URL
-        ↓
-Agent follows INSTALL_AGENT.md, installs the runtime and registers MCP + Skill
-        ↓
-User requests a game, video, feature or scene
-        ↓
-Agent checks existing assets and decides whether sound is actually needed
-        ↓
-Agent generates local audio and integrates it using the project's existing tools
-        ↓
-User reviews the finished result, not a separate audio-production workflow
-```
+[Install](#install-with-an-ai-agent) · [Usage](#using-agent-audio) ·
+[Support and limits](#current-status) · [Update](#updating-an-existing-installation) ·
+[Get help](#troubleshooting-and-help)
 
-The intended experience does not require a separate "generate sound effects"
-request, an audio-plan approval, or a mandatory candidate-picking step. Required
-installation permissions, authentication and model-license acceptance remain
-user actions; host approval policies must not be bypassed.
+## Before you install
 
-Local generation does not require a paid audio-generation API or a per-generation
-service fee. Agent subscriptions, hardware, electricity and model-license
-conditions are separate. The quality target is a useful improvement over simple
-placeholder effects, not a claim of superiority over every cloud service.
+Use a local coding agent with command execution and configuration access.
+Codex, Claude Code and Cursor are the initial registration targets. Your agent
+can check Git, Python 3.11+ and `uv`; the audio runtime uses Python 3.12.
 
-This is the product goal, not a guarantee of automatic invocation or artistic
-quality. The Skill guides the agent; the MCP server generates WAVs, not complete
-game scenes or video edits. Final integration depends on the agent's access to
-the project and its editing tools.
+<a id="disk-space-and-memory"></a>
 
-## What this project provides
-
-| Layer | Responsibility |
+| Environment | Plan for |
 |---|---|
-| Agent Audio | Dedicated installation, client registration, the `audio_status` / `generate_audio` MCP tools, runtime orchestration, file preservation, and the audio-production Skill |
-| Upstream technology | Stability AI's models and inference implementations; the MCP Python SDK supplies the protocol framework |
-| Coding agent and project tools | Decide when audio is useful and integrate generated files into the requested game, video or other work |
+| Windows CPU setup | **25 GB or more free disk space and a 32 GB-class RAM system recommended.** Model downloads are about **7.36 GB**; packages and caches are additional. No dedicated GPU is required. |
+| Apple Silicon setup | A short generation is reported on a **24 GiB** Mac, with **6.88 GB** of MLX model files. Total installation size and peak memory have not been measured. |
 
-Agent Audio is an integration tool, not a newly trained audio model. Its initial
-product focus is sound effects for **both games and videos**. The generic audio
-interface can serve other work, but broad model, client and hardware support is
-a direction to validate rather than a first-release guarantee. See the
-[project direction](docs/project-direction.md) for scope and open hypotheses.
+These are planning guidance and observations, **not verified minimum specs**.
+Smaller machines and longer generations need separate validation. See
+[resource measurements](docs/resource-requirements.md) for the full conditions.
 
-## Current status
-
-This repository is an early v0.1 release. Independent installation and real
-3-second, 44.1 kHz stereo WAV generation through MCP were verified on Windows
-using the TFLite/LiteRT CPU backend. A user-provided macOS installation report
-dated 2026-10-03 also records successful MLX generation of a 3-second WAV through
-a standalone stdio MCP client on an Apple M5 Pro with 24 GiB unified memory.
-See the [MLX validation record](docs/macos-mlx-validation.md) for the reported
-environment, results and evidence limits; direct generation from a fresh Codex
-chat and listening quality were not tested in that report.
-
-Model-free CI covers Windows, macOS and Linux, alongside dependency auditing
-and CodeQL. These checks do not establish model inference support on every
-platform.
-
-A successful WAV smoke test does not establish unprompted Skill use, integration
-into a game/video, or better perceived quality. Those are separate checks in the
-[end-to-end validation guide](docs/end-to-end-validation.md); they are not marked
-as passed by the installation reports above.
-
-Working design targets:
-
-- Windows, macOS and Linux.
-- NVIDIA, Intel and Apple hardware without making the MCP protocol hardware-specific.
-- Codex, Claude Code and Cursor first; additional MCP/Agent Skills clients can be added as adapters.
-- Stable Audio 3 Medium as the default high-quality model.
-- Portable CPU fallback through Stability AI's official TFLite/LiteRT implementation.
-- Apple Silicon acceleration through Stability AI's official MLX implementation.
-
-Acceleration roadmap:
-
-- NVIDIA CUDA / TensorRT: backend interface reserved; automatic cross-platform setup still needs validation, especially on Windows.
-- Intel XPU: backend interface reserved; until validated, Intel systems use the portable CPU runtime rather than pretending XPU acceleration is supported.
+Local generation has **no audio-service subscription or per-generation API fee**.
+Agent subscriptions, hardware and electricity are separate. You must accept any
+required model terms and complete authentication yourself; see
+[licenses](#license). Initial installation downloads the runtime and models.
 
 ## Install with an AI agent
 
-Give your coding agent this repository URL and say:
+Paste this into your coding agent:
 
-> Install this project. Read INSTALL_AGENT.md first and follow its instructions. Inspect my OS, hardware, Python, uv and installed agent clients. Install the dedicated runtime and models, register both the MCP server and audio-production Skill, and verify a short WAV through MCP. Preserve existing settings and do not accept model licenses on my behalf.
+```text
+Install Agent Audio from https://github.com/AIEGOBOT/agent-audio.
+Read INSTALL_AGENT.md first and follow its instructions.
+Check my OS, hardware, RAM, disk space, Python, uv and installed agent clients.
+Install the dedicated runtime and models, then register the MCP server and
+audio-production Skill. Preserve existing settings and report conflicts.
+Do not accept model licenses or bypass permissions on my behalf.
+Verify a short WAV through MCP and report what worked, what was not tested,
+and any remaining steps I need to complete.
+```
 
-The agent should follow the installation guide and report any configuration
-conflicts or required model access. Existing settings are preserved.
+The agent should report the installed backend, client registration results and
+test WAV path. If the client does not discover the new tools or Skill, start a
+fresh session. Installation permissions, credentials and license acceptance
+remain under your control.
 
-Already installed? Updating the repository does **not** update a copied Skill.
-Follow the [existing-installation checks](docs/end-to-end-validation.md#existing-installations)
-before testing this revision. Conflicting Skill copies are intentionally preserved.
+Already installed? See [updating](#updating-an-existing-installation).
+Prefer commands? See [manual setup](#manual-developer-setup).
 
-## Disk space and memory
+<a id="goal"></a>
 
-These figures apply to the default **Windows x64 / TFLite CPU / Stable Audio 3
-Medium** configuration. Planning recommendations are not verified minimum specs.
+## Using Agent Audio
 
-| Item | Planning guidance / measurement |
+After setup, work in your game or video project and make an ordinary production
+request. For example:
+
+**Game task**
+
+> Finish the enemy hit reaction and victory feedback in this small game.
+> Keep the existing visual style and make the feature ready to play.
+
+**Video task**
+
+> Edit these clips into a 20-second product teaser with clean transitions and
+> a finished end card, using the tools already available in this project.
+
+These are examples of intended use, not validated demos. The Skill guides the
+agent to reuse suitable audio, generate missing sounds when useful, and connect
+them to the requested work. A separate sound request, audio-plan approval or
+candidate-selection step is not the default workflow. Explicit sound requests
+also work through the same tools.
+
+The agent needs access to the project and appropriate editing tools to apply
+the files. It should respect existing assets, intentional silence and requests
+for no audio. The MCP server generates WAVs; it is not a game engine or video
+editor, and the Skill does not guarantee that every agent will invoke it.
+
+## Current status
+
+| Environment or client | Current implementation and evidence |
 |---|---|
-| Free disk space before installation | **25 GB or more recommended**, allowing for temporary downloads, package caches, model copies and additional outputs |
-| Model downloads | Four default weights total **7.36 GB (6.86 GiB)**; runtime and Python packages are additional |
-| Installed file sizes | Dedicated data directory, generated native cache and MCP venv: **8.15 GB (7.59 GiB)** with hardlinks counted once |
-| System RAM | **32 GB class recommended**, matching the tested Windows host; 8/16 GB minimum configurations have not been validated |
-| Generation memory | Inference process peak Working Set: **11.56 GiB** for one 3-second generation; OS/editor/other applications are additional |
-| GPU / VRAM | No dedicated GPU or VRAM required for the current CPU backend |
+| Windows | TFLite/LiteRT CPU is the default. Independent installation and a 3-second, 44.1 kHz stereo WAV through MCP are documented. |
+| Apple Silicon macOS | MLX is selected. A user-provided report dated 2026-10-03 records a 3-second WAV on an M5 Pro with 24 GiB memory via a standalone stdio MCP client. |
+| Linux and other CPU environments | The installer selects the CPU path outside Apple Silicon. Linux has model-free CI coverage; this is not verified model inference support. |
+| NVIDIA / Intel graphics | The current default remains CPU; CUDA/TensorRT and Intel XPU acceleration are not enabled as validated automatic paths. |
+| Codex / Claude Code / Cursor | MCP and Skill registration are implemented. Registration alone does not establish fresh-session discovery, automatic use or completed project integration. |
 
-The model directory and cache share hardlinks where possible. Summing both
-directory sizes counts weights twice: 15.51 GB in this installation. Copying
-instead of hardlinking increases storage use. The installed-size figure excludes
-the separate uv cache, base Python, external output folders and filesystem
-overhead. Disk GB is decimal; GiB is binary.
+See the [Windows measurements](docs/resource-requirements.md) and
+[macOS report](docs/macos-mlx-validation.md) for conditions and evidence limits.
+Model-free CI runs on Windows, macOS and Linux. A valid WAV or passing CI does
+not establish listening quality or successful game/video integration; those
+remain separate [end-to-end checks](docs/end-to-end-validation.md).
 
-Memory was measured on 2026-09-28 with an existing native cache and one 3-second
-request. It is not a first-run or long-generation maximum. The macOS report
-records **6.88 GB (6.41 GiB)** of MLX model files and a successful short generation
-on a **24 GiB** host. Total MLX installation size and peak unified memory were
-not measured; this is not a minimum memory requirement. Do not apply the CPU
-numbers to MLX. See [measurement details](docs/resource-requirements.md).
+### Known limits
 
-## Manual developer setup
+The current interface is **text-to-WAV generation**, not audio-to-audio editing,
+inpainting or continuation. Nonempty negative prompts are rejected; describe
+the desired sound in the main prompt. Existing output files are not overwritten,
+and the output filesystem must support hardlinks.
 
-Requires Git, Python 3.11+ and uv. The separate audio runtime uses Python 3.12.
+CPU generation can be slow, and long requests can hit the 540-second inference
+timeout. Start with short sounds. Other models, accelerators and client
+combinations are directions to validate, not blanket support promises.
+
+## Updating an existing installation
+
+**Updating the Git checkout does not update an installed Skill copy.** Ask your
+agent to preserve local changes, update the checkout and compare the complete
+installed `audio-production` folder with the repository version.
+
+Review and authorize any Skill replacement. Keep the old copy outside all Skill
+discovery folders, preserve customizations, then register the new copy and start
+a fresh session. Do not reinstall models just to refresh a Skill. Runtime and
+MCP conflicts need separate review, not deletion of existing environments or
+unrelated settings. Your agent can follow the
+[detailed update procedure](docs/end-to-end-validation.md#existing-installations).
+
+## Troubleshooting and help
+
+| Symptom | First check |
+|---|---|
+| Tools or Skill are missing | Start a fresh client session and ask the agent to check that client's MCP and Skill registration outcomes. |
+| Setup reports a conflict | Review the existing paths and settings. A conflict means they were preserved, not that they should be deleted. See [updating](#updating-an-existing-installation). |
+| Models are missing or access is denied | Let the agent identify the missing files or access step. Complete required authentication and model-license acceptance yourself. |
+| Generation fails or times out | Try a short request and inspect the reported backend and local error log. `audio_status` reports prerequisites, not a successful generation test. |
+| A WAV exists but is not used in the project | Check the agent's access to the project and its editing tools. File generation and final integration are separate steps. |
+
+Search [existing issues](https://github.com/AIEGOBOT/agent-audio/issues) or
+[report a problem](https://github.com/AIEGOBOT/agent-audio/issues/new). Include OS,
+RAM, CPU/GPU, client/version, Agent Audio commit, backend, reproduction steps
+and the exact error. State whether setup, generation or integration failed.
+
+Review logs before sharing. **Do not post credentials, full client configuration,
+private prompts or personal paths.** Follow [SECURITY.md](SECURITY.md) for security
+concerns rather than posting sensitive details publicly.
+
+<a id="model-licenses"></a>
+
+## License
+
+Agent Audio source code is [MIT licensed](LICENSE). Model weights are not
+included in this repository. Stable Audio 3 Medium is distributed separately
+under Stability AI's Community License, with T5Gemma components subject to Gemma
+terms. You must review applicable model terms; the source-code license does not
+replace them. See [third-party notices](THIRD_PARTY_NOTICES.md).
+
+## Technical and developer reference
+
+### What this project provides
+
+Agent Audio supplies dedicated setup, MCP/client registration, runtime and file
+management, and the audio-production Skill. Stability AI supplies the models and
+inference implementations; the MCP Python SDK supplies the protocol framework.
+The calling agent and its project tools handle final integration.
+
+This is an integration tool, not a newly trained model. See
+[architecture](ARCHITECTURE.md) and [project direction](docs/project-direction.md).
+
+### Manual developer setup
+
+Requires Git, Python 3.11+ and `uv`. Review [INSTALL_AGENT.md](INSTALL_AGENT.md)
+for permissions, resource checks and model access first.
 
 ```bash
 git clone https://github.com/AIEGOBOT/agent-audio.git
@@ -139,90 +184,45 @@ uv sync --frozen
 uv run --frozen python install/bootstrap.py --doctor
 ```
 
-After reviewing diagnostics, install the runtime and models, then register
-detected clients:
+After reviewing diagnostics:
 
 ```bash
 uv run --frozen python install/bootstrap.py --runtime-only
 uv run --frozen python install/bootstrap.py --register-only
 ```
 
-Use `--register-only` by itself when the runtime is already prepared.
+Use `--register-only` alone when the runtime is prepared, or run bootstrap
+without flags for both steps. Data defaults to `~/.agent-audio`; set
+`AGENT_AUDIO_HOME` before installation to choose another location. Outputs
+are in its `output/` folder. See [INSTALL_AGENT.md](INSTALL_AGENT.md) for paths,
+client registration and per-client conflict handling, and [SECURITY.md](SECURITY.md)
+for runtime/model pinning and file-preservation details.
 
-To install the runtime and register detected agents:
+### MCP tools
 
-```bash
-uv run --frozen python install/bootstrap.py
-```
-
-The default data directory is `~/.agent-audio`: the runtime lives in
-`runtime/stable-audio-3/`, its models in `optimized/<backend>/models/`, the private
-model cache in `cache/huggingface/`, and generated audio in `output/`. Set
-`AGENT_AUDIO_HOME` before installation to choose a separate data directory; new
-MCP registrations retain it. The MCP application uses the repository's `.venv`;
-the runtime uses its own `optimized/<backend>/.venv`.
-
-Conflicting Skills, runtime checkouts and MCP entries are preserved and reported.
-Registration returns per-client Skill and MCP outcomes. Independent clients
-continue after a conflict; `success: false` and exit code 1 indicate partial
-failure. Review the reported outcomes before treating installation as complete.
-Legacy MCP entries without Python's `-I` need a reviewed migration. Runtime and
-model revisions are pinned; TFLite model downloads also use SHA-256 verification.
-See [security boundaries](SECURITY.md) for limitations and configuration handling.
-
-Skill destinations for detected clients:
-
-| Client | Skill directory |
+| Tool | Purpose |
 |---|---|
-| Codex | `~/.agents/skills/audio-production/` |
-| Claude Code | `~/.claude/skills/audio-production/` |
-| Cursor | `~/.cursor/skills/audio-production/` |
+| `audio_status` | Inspect platform, hardware, backend, runtime/model paths and readiness. |
+| `generate_audio` | Generate a WAV using the selected Stable Audio backend and return its path. |
 
-Open a fresh client session if it does not discover the new MCP server or Skill.
-Any required authentication or license acceptance must be completed by the user.
-
-## MCP tools
-
-The initial MCP server exposes:
-
-- `audio_status` — inspect platform, hardware and runtime readiness.
-- `generate_audio` — generate a WAV using the selected Stable Audio backend.
-
-The MCP surface intentionally does not contain Unity/game-specific concepts. Games, videos, applications, websites, film, advertising and general media workflows all use the same audio layer.
-
-`audio_status` includes the runtime Python and model paths. For `generate_audio`,
-omit `output_path` to get a unique WAV in the default output folder, or specify a
-new `.wav` path. Existing outputs are never overwritten. The output filesystem
-must support hardlinks. Duration must be greater than zero and at most 380
-seconds; long CPU requests may exceed the 540-second inference timeout.
-
-`runtime_ready` checks prerequisite files and model headers, not successful
-inference. The `readiness` object separately reports upstream checkout
-verification and checks that were not performed (model checksums, dependency
-health and generation). `capabilities.negative_prompt` is currently false:
-nonempty negative prompts are rejected because both pinned backends ignore them
-with the current CFG 1.0 policy. Describe the desired sound in `prompt` instead.
-
-Example arguments for a 3-second effect:
+Omit `output_path` for a unique default output, or choose a new `.wav` path.
+Duration must be greater than zero and at most 380 seconds, subject to the
+540-second inference timeout. `runtime_ready` checks files and model headers,
+not successful inference. The separate `readiness` object reports checkout
+verification and unperformed checksum, dependency-health and generation checks.
+`capabilities.negative_prompt` is false under the current CFG 1.0 policy;
+nonempty negative prompts are rejected.
 
 ```json
 {
-  "prompt": "Heavy cinematic metallic robot impact, dense mechanical body, sharp transient, subtle electrical crackle, isolated sound effect, no voice, no music",
+  "prompt": "Heavy metallic impact, sharp transient, isolated sound effect, no voice, no music",
   "seconds": 3
 }
 ```
 
-The current MCP generation tool accepts text and produces a WAV. Audio-to-audio
-editing, inpainting and continuation are upstream model capabilities, but are
-not exposed by these MCP tools.
+### Development checks
 
-## Development checks
-
-For the separate Small-SFX versus Medium SFX comparison runner, see the
-[benchmark guide](benchmarks/sfx_model_compare/README.md). It uses an isolated
-TFLite runtime and keeps generated WAVs outside Git.
-
-These checks do not require model weights. Doctor also works offline.
+These checks do not require model weights; doctor also works offline.
 
 ```bash
 uv run --frozen ruff check src install tests
@@ -232,43 +232,16 @@ uv run --frozen pytest -q
 uv run --frozen python install/bootstrap.py --doctor
 ```
 
-## Model licenses
+### Documentation and project layout
 
-Model weights are **not** included in this repository.
+| Reader | Start here |
+|---|---|
+| Installing agent | [INSTALL_AGENT.md](INSTALL_AGENT.md) |
+| User checking resource needs | [Resource measurements](docs/resource-requirements.md) |
+| Contributor | [Repository instructions](AGENTS.md) and [architecture](ARCHITECTURE.md) |
+| Maintainer validating real work | [Project direction](docs/project-direction.md) and [end-to-end validation](docs/end-to-end-validation.md) |
+| Comparing models | [Small-SFX versus Medium benchmark](benchmarks/sfx_model_compare/README.md) |
 
-Stable Audio 3 Medium is distributed separately by Stability AI and is subject to the Stability AI Community License. It also includes T5Gemma components subject to Gemma terms. The installer must never silently accept those terms for the user.
-
-See [third-party notices](THIRD_PARTY_NOTICES.md).
-
-## Documentation and project layout
-
-- [Project direction](docs/project-direction.md): purpose, scope, success criteria and unverified hypotheses.
-- [End-to-end validation](docs/end-to-end-validation.md): existing-installation checks, game/video trials and evidence reporting.
-- [Agent installation guide](INSTALL_AGENT.md): inspect, install, register and verify.
-- [Repository instructions](AGENTS.md): architecture rules and required checks.
-- [Security boundaries](SECURITY.md): configuration preservation and execution limits.
-- [Resource measurements](docs/resource-requirements.md): disk and memory guidance.
-- [macOS MLX validation](docs/macos-mlx-validation.md): user-reported installation and generation evidence.
-- [Third-party notices](THIRD_PARTY_NOTICES.md): separate model and runtime terms.
-
-```text
-agent-audio/
-├─ INSTALL_AGENT.md
-├─ AGENTS.md
-├─ SECURITY.md
-├─ docs/resource-requirements.md
-├─ skills/audio-production/
-├─ src/agent_audio/
-├─ install/bootstrap.py
-├─ models/registry.json
-├─ tests/
-└─ .github/workflows/
-```
-
-Stable Audio backend details live in `src/agent_audio/backends.py`; runtime
-orchestration, process cleanup and filesystem publication stay separate from
-the generic MCP tools. See [architecture](ARCHITECTURE.md) for these boundaries.
-
-## License
-
-Agent Audio source code is [MIT licensed](LICENSE). Third-party models and runtimes keep their own licenses.
+Source is in `src/agent_audio/`, setup starts at `install/bootstrap.py`, the
+portable Skill is in `skills/audio-production/`, and regression tests are in
+`tests/`. Keep generated media and model weights outside Git.
