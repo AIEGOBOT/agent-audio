@@ -1,31 +1,58 @@
 # Agent Audio
 
-Universal local audio generation for AI coding agents.
+Local audio generation for AI coding agents, with an MCP server and an Agent Skill.
 
-Agent Audio exposes Stable Audio 3 through an MCP server and ships a portable Agent Skill that can be discovered by Codex, Claude Code, Cursor, and other Agent Skills/MCP-compatible clients.
+Agent Audio is for creators building games and videos with coding agents who do
+not want to manage a separate audio-production workflow. It installs a dedicated
+local runtime without requiring ComfyUI, Stability Matrix, or an existing Stable
+Audio environment. Codex, Claude Code and Cursor are the initial client targets.
 
 ## Goal
 
-The intended installation flow is deliberately agent-first:
+Let the agent complete the sound work as part of the requested deliverable:
 
 ```text
-User gives an AI coding agent this GitHub repository URL
+User gives a coding agent this repository URL
         ↓
-Agent reads INSTALL_AGENT.md
+Agent follows INSTALL_AGENT.md, installs the runtime and registers MCP + Skill
         ↓
-Agent detects OS / hardware / installed clients
+User requests a game, video, feature or scene
         ↓
-Agent installs the local runtime
+Agent checks existing assets and decides whether sound is actually needed
         ↓
-Agent registers the MCP server + audio-production skill
+Agent generates local audio and integrates it using the project's existing tools
         ↓
-User asks for a larger task
-        ↓
-Agent invokes audio-production automatically when audio is materially useful
+User reviews the finished result, not a separate audio-production workflow
 ```
 
-Agent Audio installs a dedicated runtime and models without requiring ComfyUI,
-Stability Matrix, or an existing Stable Audio environment.
+The intended experience does not require a separate "generate sound effects"
+request, an audio-plan approval, or a mandatory candidate-picking step. Required
+installation permissions, authentication and model-license acceptance remain
+user actions; host approval policies must not be bypassed.
+
+Local generation does not require a paid audio-generation API or a per-generation
+service fee. Agent subscriptions, hardware, electricity and model-license
+conditions are separate. The quality target is a useful improvement over simple
+placeholder effects, not a claim of superiority over every cloud service.
+
+This is the product goal, not a guarantee of automatic invocation or artistic
+quality. The Skill guides the agent; the MCP server generates WAVs, not complete
+game scenes or video edits. Final integration depends on the agent's access to
+the project and its editing tools.
+
+## What this project provides
+
+| Layer | Responsibility |
+|---|---|
+| Agent Audio | Dedicated installation, client registration, the `audio_status` / `generate_audio` MCP tools, runtime orchestration, file preservation, and the audio-production Skill |
+| Upstream technology | Stability AI's models and inference implementations; the MCP Python SDK supplies the protocol framework |
+| Coding agent and project tools | Decide when audio is useful and integrate generated files into the requested game, video or other work |
+
+Agent Audio is an integration tool, not a newly trained audio model. Its initial
+product focus is sound effects for **both games and videos**. The generic audio
+interface can serve other work, but broad model, client and hardware support is
+a direction to validate rather than a first-release guarantee. See the
+[project direction](docs/project-direction.md) for scope and open hypotheses.
 
 ## Current status
 
@@ -41,6 +68,11 @@ chat and listening quality were not tested in that report.
 Model-free CI covers Windows, macOS and Linux, alongside dependency auditing
 and CodeQL. These checks do not establish model inference support on every
 platform.
+
+A successful WAV smoke test does not establish unprompted Skill use, integration
+into a game/video, or better perceived quality. Those are separate checks in the
+[end-to-end validation guide](docs/end-to-end-validation.md); they are not marked
+as passed by the installation reports above.
 
 Working design targets:
 
@@ -64,6 +96,10 @@ Give your coding agent this repository URL and say:
 
 The agent should follow the installation guide and report any configuration
 conflicts or required model access. Existing settings are preserved.
+
+Already installed? Updating the repository does **not** update a copied Skill.
+Follow the [existing-installation checks](docs/end-to-end-validation.md#existing-installations)
+before testing this revision. Conflicting Skill copies are intentionally preserved.
 
 ## Disk space and memory
 
@@ -206,6 +242,8 @@ See [third-party notices](THIRD_PARTY_NOTICES.md).
 
 ## Documentation and project layout
 
+- [Project direction](docs/project-direction.md): purpose, scope, success criteria and unverified hypotheses.
+- [End-to-end validation](docs/end-to-end-validation.md): existing-installation checks, game/video trials and evidence reporting.
 - [Agent installation guide](INSTALL_AGENT.md): inspect, install, register and verify.
 - [Repository instructions](AGENTS.md): architecture rules and required checks.
 - [Security boundaries](SECURITY.md): configuration preservation and execution limits.
