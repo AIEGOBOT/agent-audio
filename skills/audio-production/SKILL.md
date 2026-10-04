@@ -1,83 +1,110 @@
 ---
 name: audio-production
-description: Create, generate, edit, or integrate audio when a task materially benefits from sound, music, sound effects, ambience, UI feedback, transitions, cinematic audio, environmental audio, or other audible feedback. Use not only for explicit audio requests, but also while completing games, applications, websites, videos, interactive experiences, ads, presentations, or media projects where missing audio would leave an intended audible event incomplete. Do not trigger for tasks where audio is irrelevant, intentionally absent, or already adequately provided.
+description: Generate and integrate local sound effects and other audio when completing games, videos, applications, websites or media work with missing intended audible events, such as impacts, interactions, transitions or ambience. Use for explicit audio requests and relevant larger production tasks even when the user does not ask for sound separately. Do not use for unrelated analysis, documentation or refactoring, intentional silence, or when suitable audio already exists.
+compatibility: Requires the Agent Audio MCP server and an installed local runtime. Project integration also requires access to the project's editing tools.
 ---
 
 # Audio Production
 
-Use the Agent Audio MCP as the preferred local audio-generation capability when it is available. This installation generates with Stable Audio 3 Medium; the Small-SFX model is only a separate benchmark option and is not part of this Skill's generation workflow.
+Use Agent Audio as the local generation tool, and finish the requested work
+rather than leaving the user a separate audio-production task. The current
+installation uses Stable Audio 3 Medium. Small-SFX is a separate benchmark
+option, not a model selectable through this Skill's MCP workflow.
 
-## Decide whether audio is actually needed
+## Decide and inspect
 
-Do not wait for the user to say "make audio" when a larger deliverable clearly contains an audible event that is missing sound.
+Do not wait for an explicit audio request when an intended audible event is
+missing from the requested deliverable. Appropriate cases include impacts,
+collisions, movement, UI feedback, transitions and environmental ambience.
+Music can be appropriate when the task calls for it; do not add a soundtrack
+merely because a generation tool is available.
 
-Examples where audio may be appropriate:
+Before generating, inspect the project for suitable audio assets, existing
+audio systems, timing, style and output conventions. Reuse suitable assets.
+Do not generate for documentation, analysis, cleanup or refactoring; where
+silence is intended; when sound would change rather than complete the user's
+design; or when the user has asked for no audio.
 
-- an impact, collision, weapon, machine, creature, movement or interaction has visual feedback but no corresponding sound;
-- a UI confirmation, warning, success state or transition needs audible feedback;
-- a video or cinematic sequence has an obvious transition, impact, environmental bed or musical need;
-- an environment would normally contain ambience and the requested experience is intended to feel complete;
-- an intro, menu, ad, presentation or media piece calls for music or a short sonic identity.
+## Autonomy and boundaries
 
-Do **not** generate audio merely because the tool exists. Avoid audio when:
+Make routine decisions about sound, prompts, candidates and integration within
+the requested task. Do not introduce a mandatory sound-plan approval or ask the
+user to choose candidates before completing the work. Honor an explicit request
+for review or alternatives, and never override the user's scope.
 
-- the deliverable is documentation, analysis, code cleanup, refactoring or another non-audio artifact;
-- silence is intentional;
-- suitable assets already exist;
-- adding sound would materially change the user's design rather than complete it;
-- the user asked for no audio.
-
-## Inspect before generating
-
-When working inside an existing project:
-
-1. Search for current audio assets and audio systems.
-2. Reuse suitable assets before generating duplicates.
-3. Identify the event timing, intended duration and existing sonic style.
-4. Choose a meaningful output path and filename.
+This does not authorize bypassing host permissions, accepting model terms,
+accessing unrelated files, or paying for external services. If installation,
+credentials or new permissions are required, report the blocker and obtain the
+required authorization; do not silently install a different backend or use a
+cloud provider. No routine creative checkpoint is needed after authorized setup.
 
 ## Prompt design
 
-Prefer concrete acoustic language over vague adjectives. Specify:
+Use concrete acoustic descriptions: source/material, action, weight, texture,
+space and timing. Match the existing sonic style rather than requesting generic
+"epic" sound. For example, specify a dry, close metallic impact with a sharp
+transient and a short decay. Include "no voice" or "no music" in the positive
+prompt when appropriate.
 
-- source/material: metal, glass, fabric, engine, footsteps, rain;
-- action: impact, scrape, rise, pulse, burst, loop;
-- scale/weight: tiny, light, heavy, massive;
-- texture: clean, distorted, gritty, airy, mechanical;
-- space: dry, room, hall, outdoor, distant;
-- timing: one-shot, short transient, sustained, seamless loop;
-- exclusions when important: no voice, no music, no long reverb.
+The current tool rejects nonempty `negative_prompt`; put desired characteristics
+and exclusions in `prompt`. See [prompt examples](references/prompting.md) when
+useful. A request for a seamless loop does not establish that the generated
+file actually loops cleanly.
 
-For important effects, prefer genuinely different sound directions rather than changing only the random seed.
+## Generate within a bounded task
 
-Example directions:
+1. Call `audio_status` when runtime readiness is unknown. File readiness is not a
+   successful generation test. Inspect the selected backend and reported limits.
+2. Start with the shortest practical asset for the event. A roughly 3-second
+   source is a useful starting point for a short effect, not a speed guarantee.
+   The meaningful event may occupy only part of the generated file.
+3. Call `generate_audio` with `prompt`, `seconds` and, when useful, a new `.wav`
+   `output_path` in the intended project asset directory. Omitting the path uses
+   Agent Audio's output folder; move/copy and integrate the asset when required.
+   Never overwrite existing outputs or assume a failed call produced a new file.
+4. Generate only the distinct assets the task needs. Reuse assets where
+   appropriate; do not request large candidate batches by default. When another
+   candidate is justified, change the acoustic direction deliberately. Stop
+   repeated attempts on a persistent error and report the limitation.
 
-- realistic / physical;
-- stylized / arcade;
-- cinematic / layered.
+The current interface is text-to-WAV. It does not expose audio editing,
+inpainting, continuation, loop construction or mixing as MCP operations.
+Use the project's existing tools for trimming, timing, fades or mixing when
+available and authorized. Do not invent tool parameters or install new editing
+software without the appropriate authorization. Long CPU requests can time out.
 
-## Generation workflow
+## Integrate and verify the deliverable
 
-1. Call `audio_status` when runtime/backend readiness is unknown.
-2. Use `generate_audio` with a specific prompt and project-appropriate output path.
-3. Verify the output exists and is playable.
-4. Integrate it into the project only if the larger task requires integration.
-5. Match event timing in the host project rather than assuming generated duration equals useful duration.
+When the larger request requires integration, generating a file is not the end
+of the task. Use the existing project tools and audio system:
 
-## Quality rules
+- In games, connect the asset to the intended event and check triggering,
+  repetition, restart behavior and the project's existing volume/mute controls.
+- In videos, place the useful sound event at the intended timeline position,
+  balance it against existing dialogue/music, and check the rendered result.
 
-- Avoid generic procedural beep/boop placeholders when the Agent Audio model is available.
-- For short SFX, isolate a single event and ask for no music/voice unless those are intended.
-- For ambience or music that must loop, generate enough material to make loop editing practical.
-- Avoid clipping; preserve headroom when further layering is expected.
-- Keep multiple candidates when artistic choice matters.
+These are host-project tasks, not built-in Agent Audio engine/editor adapters.
+Preserve unrelated behavior and assets. Match the useful transient or audible
+event, not just the beginning or nominal duration of the generated file. Verify
+loop boundaries when looping is required; do not infer a clean loop from a prompt.
 
-## Hardware and model behavior
+Check file existence, actual duration, sample rate and channels. With available
+tools, check silence, non-finite samples, peaks/clipping and the final mix. Such
+checks do not prove prompt adherence or artistic quality. Use actual listening
+or audio-analysis capabilities when available; never claim to have listened
+when only metadata was inspected. Without that capability, state the quality
+limit in the final report rather than inventing a listening assessment or
+forcing an intermediate user selection.
 
-Do not expose hardware implementation details unless relevant to troubleshooting. The MCP/runtime chooses the available backend.
+If generation or integration is blocked, do not silently substitute a paid
+service or procedural beep and present it as model-generated audio. Preserve
+completed work and report the specific missing part. Do not claim the whole
+sound workflow passed when only a WAV or a code reference was produced.
 
-Never claim Intel XPU, NVIDIA CUDA, Apple Metal or another accelerator is active unless `audio_status` confirms it.
+## Final report
 
-## Licenses
-
-Model license acceptance is a user action. Never accept gated-model terms on the user's behalf.
+Report the finished result, where the audio was integrated, important asset
+paths, checks actually performed and remaining blockers or unverified quality.
+Do not expose hardware details unless relevant to performance or troubleshooting.
+Never claim CUDA, XPU or Apple acceleration unless the reported backend supports
+that claim. Model-license acceptance always remains a user action.
