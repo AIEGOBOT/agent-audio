@@ -1,6 +1,6 @@
 ---
 name: audio-production
-description: Generate and integrate local sound effects and other audio when completing games, videos, applications, websites or media work with missing intended audible events, such as impacts, interactions, transitions or ambience. Use for explicit audio requests and relevant larger production tasks even when the user does not ask for sound separately. Do not use for unrelated analysis, documentation or refactoring, intentional silence, or when suitable audio already exists.
+description: Generate and integrate local sound effects and other audio. Use when asked to build, finish or improve a game, edit a video, animate a scene, or create an interactive application or website where sound contributes to the requested result, even if audio is not mentioned. Also use for explicit audio requests. Do not use for unrelated analysis, documentation or refactoring, intentional silence, or when suitable audio already exists.
 compatibility: Requires the Agent Audio MCP server and an installed local runtime. Project integration also requires access to the project's editing tools.
 ---
 

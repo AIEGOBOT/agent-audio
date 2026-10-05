@@ -23,9 +23,9 @@ This document records observations and planning recommendations for installation
 | Model revision | `da6edc54ddba10bfd79a077102ded687f80e882b` |
 | Generation | MCP `generate_audio`, 3 seconds, `medium` DiT / `same-l` decoder, default options |
 | Cache state | Model files and native generation cache already present |
-| Result | 529,244-byte WAV, 44.1 kHz, stereo, 3.0 seconds; MCP call took about 57.2 seconds |
+| Result | 529,244-byte WAV, 44.1 kHz, stereo, 3.0 seconds |
 
-The test used the dedicated Agent Audio runtime prepared during this installation test. It did not invoke an existing ComfyUI, Stability Matrix or separate audio environment. Runtime varies with host load; the duration above is a single observation.
+The test used the dedicated Agent Audio runtime prepared during this installation test. It did not invoke an existing ComfyUI, Stability Matrix or separate audio environment.
 
 ## Downloads and storage
 
@@ -74,8 +74,8 @@ The [2026-10-03 macOS installation report](macos-mlx-validation.md) records
 successful Stable Audio 3 Medium generation on an Apple M5 Pro with 24 GiB
 unified memory. Four MLX model files total **6,883,369,494 bytes (6.88 GB /
 6.41 GiB)**. The reported 3-second generation took 8.02 seconds; timing scope
-and cache state were not recorded, so this is not a controlled comparison with
-the Windows observation above.
+and cache state were not recorded, so this is not a controlled performance
+benchmark.
 
 The host had about 178 GiB free before installation. That is available capacity,
 not installation consumption or a disk recommendation. Runtime packages, caches
