@@ -2,9 +2,12 @@ import asyncio
 import datetime
 import os
 import sys
+import wave
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+
+from agent_audio import mcp_server
 
 
 def test_real_stdio_status_and_input_rejection(tmp_path):
@@ -48,3 +51,37 @@ def test_real_stdio_status_and_input_rejection(tmp_path):
                 )
 
     asyncio.run(probe())
+
+
+def test_successful_generation_tool_dispatch(tmp_path, monkeypatch):
+    """Exercise registered MCP dispatch; synthetic audio is not model inference."""
+    output = tmp_path / "impact.wav"
+    calls = []
+
+    def synthetic_backend(**kwargs):
+        calls.append(kwargs)
+        with wave.open(str(output), "wb") as wav:
+            wav.setparams((1, 2, 8000, 0, "NONE", ""))
+            wav.writeframes(b"\x00\x00" * 8000)
+        return output
+
+    monkeypatch.setattr(mcp_server, "_generate_audio", synthetic_backend)
+    result = asyncio.run(
+        mcp_server.mcp.call_tool(
+            "generate_audio",
+            {"prompt": "metal impact", "seconds": 1, "output_path": str(output)},
+        )
+    )
+    content, structured = result
+    assert any(getattr(block, "text", None) == str(output) for block in content)
+    assert structured == {"result": str(output)}
+    assert calls == [
+        {
+            "prompt": "metal impact",
+            "seconds": 1.0,
+            "output_path": str(output),
+            "negative_prompt": None,
+        }
+    ]
+    with wave.open(str(output), "rb") as wav:
+        assert wav.getnframes() == 8000
