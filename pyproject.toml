@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = [
+  # MCP 2.x requires a coordinated server/client migration; see docs/mcp-compatibility.md.
   "mcp>=1.30,<2",
   "psutil>=6,<8",
   "pywin32>=311; sys_platform == 'win32'",
