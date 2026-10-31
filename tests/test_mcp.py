@@ -1,9 +1,11 @@
 import asyncio
 import datetime
 import os
+import signal
 import sys
 import wave
 
+import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -85,3 +87,81 @@ def test_successful_generation_tool_dispatch(tmp_path, monkeypatch):
     ]
     with wave.open(str(output), "rb") as wav:
         assert wav.getnframes() == 8000
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX signal semantics")
+def test_sigterm_during_generation_releases_lock_and_stops_runtime(tmp_path):
+    home = tmp_path / "home"
+    marker = tmp_path / "started"
+    output = tmp_path / "out" / "impact.wav"
+    child = (
+        "import os,pathlib,time; "
+        f"pathlib.Path({str(marker)!r}).write_text(f'{{os.getpid()}} {{os.getppid()}}'); "
+        "time.sleep(60)"
+    )
+    server = "\n".join(
+        [
+            "import sys",
+            "from agent_audio import mcp_server, runtime",
+            "runtime.detect_environment = lambda: None",
+            "runtime.recommended_backend = lambda _: 'tflite'",
+            "runtime.backend_ready = lambda _: True",
+            "runtime.verify_upstream_checkout = lambda _: None",
+            "runtime._runtime_command = lambda _: "
+            f"([sys.executable, '-c', {child!r}], runtime.data_root())",
+            "mcp_server.main()",
+        ]
+    )
+    lock = home / "generation.agent-audio.lock"
+    runtime_pid = None
+
+    def alive(pid):
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        return True
+
+    async def probe():
+        nonlocal runtime_pid
+        params = StdioServerParameters(
+            command=sys.executable,
+            args=["-I", "-c", server],
+            env={**os.environ, "AGENT_AUDIO_HOME": str(home)},
+        )
+        async with stdio_client(params) as (read, write):
+            async with ClientSession(
+                read, write, read_timeout_seconds=datetime.timedelta(seconds=10)
+            ) as session:
+                await session.initialize()
+                call = asyncio.create_task(
+                    session.call_tool(
+                        "generate_audio",
+                        {"prompt": "impact", "seconds": 1, "output_path": str(output)},
+                    )
+                )
+                for _ in range(200):
+                    if marker.exists() and marker.read_text():
+                        break
+                    await asyncio.sleep(0.05)
+                runtime_pid, server_pid = map(int, marker.read_text().split())
+                assert lock.exists()
+                os.kill(server_pid, signal.SIGTERM)
+                for _ in range(100):
+                    if not lock.exists() and not alive(runtime_pid):
+                        break
+                    await asyncio.sleep(0.05)
+                call.cancel()
+
+    try:
+        try:
+            asyncio.run(probe())
+        except BaseException:
+            pass
+        assert runtime_pid is not None
+        assert not lock.exists()
+        assert not alive(runtime_pid)
+        assert not list(output.parent.glob(".agent-audio-render-*"))
+    finally:
+        if runtime_pid is not None and alive(runtime_pid):
+            os.killpg(runtime_pid, signal.SIGKILL)

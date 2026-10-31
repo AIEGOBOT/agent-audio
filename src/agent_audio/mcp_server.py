@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import signal
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
@@ -52,7 +53,15 @@ def generate_audio(
     return str(path)
 
 
+def _exit_on_sigterm(signum: int, frame: object) -> None:
+    # Default SIGTERM handling skips finally blocks. A host that stops this
+    # server during generation would then leave the generation lock and an
+    # orphaned runtime process group. SystemExit runs that cleanup.
+    raise SystemExit(128 + signum)
+
+
 def main() -> None:
+    signal.signal(signal.SIGTERM, _exit_on_sigterm)
     mcp.run()
 
 
