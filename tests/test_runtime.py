@@ -257,6 +257,18 @@ def test_linked_output_path_rejected(tmp_path, monkeypatch):
     assert output.is_symlink()
 
 
+def test_generation_rejected_while_generation_lock_is_held(tmp_path, monkeypatch):
+    from agent_audio.storage import file_lock
+
+    _ready_without_inference(monkeypatch, tmp_path)
+    output = tmp_path / "out" / "impact.wav"
+    with file_lock(runtime.runtime_paths().root / "generation"):
+        with pytest.raises(RuntimeError, match="Another generation"):
+            runtime.generate_audio("impact", 3, str(output))
+    assert not output.exists()
+    assert not list(output.parent.glob(".agent-audio-render-*"))
+
+
 def test_existing_output_is_never_replaced(tmp_path, monkeypatch):
     monkeypatch.setattr(runtime, "detect_environment", lambda: None)
     monkeypatch.setattr(runtime, "recommended_backend", lambda _: "tflite")
