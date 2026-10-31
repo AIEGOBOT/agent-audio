@@ -211,6 +211,52 @@ def test_invalid_durations_rejected_before_starting_anything(seconds, monkeypatc
         runtime.generate_audio("test", seconds)
 
 
+@pytest.mark.parametrize("prompt,negative_prompt", [("a\0b", None), ("impact", "\0")])
+def test_nul_in_prompts_rejected_before_starting_anything(
+    prompt, negative_prompt, monkeypatch
+):
+    monkeypatch.setattr(
+        runtime,
+        "detect_environment",
+        lambda: pytest.fail("Must validate before hardware probing"),
+    )
+    with pytest.raises(ValueError, match="NUL"):
+        runtime.generate_audio(prompt, 3, negative_prompt=negative_prompt)
+
+
+def _ready_without_inference(monkeypatch, tmp_path):
+    monkeypatch.setenv("AGENT_AUDIO_HOME", str(tmp_path / "data"))
+    monkeypatch.setattr(runtime, "detect_environment", lambda: None)
+    monkeypatch.setattr(runtime, "recommended_backend", lambda _: "tflite")
+    monkeypatch.setattr(runtime, "backend_ready", lambda _: True)
+    monkeypatch.setattr(runtime, "verify_upstream_checkout", lambda _: None)
+    monkeypatch.setattr(
+        runtime, "run_inference", lambda *a, **k: pytest.fail("must not render")
+    )
+
+
+def test_non_wav_output_path_rejected(tmp_path, monkeypatch):
+    _ready_without_inference(monkeypatch, tmp_path)
+    output = tmp_path / "out" / "notes.txt"
+    with pytest.raises(ValueError, match=".wav extension"):
+        runtime.generate_audio("impact", 3, str(output))
+    assert not output.parent.exists()
+
+
+def test_linked_output_path_rejected(tmp_path, monkeypatch):
+    _ready_without_inference(monkeypatch, tmp_path)
+    target = tmp_path / "elsewhere.wav"
+    output = tmp_path / "impact.wav"
+    try:
+        output.symlink_to(target)
+    except OSError:
+        pytest.skip("symlink creation privilege unavailable")
+    with pytest.raises(RuntimeError, match="link"):
+        runtime.generate_audio("impact", 3, str(output))
+    assert not target.exists()
+    assert output.is_symlink()
+
+
 def test_existing_output_is_never_replaced(tmp_path, monkeypatch):
     monkeypatch.setattr(runtime, "detect_environment", lambda: None)
     monkeypatch.setattr(runtime, "recommended_backend", lambda _: "tflite")
