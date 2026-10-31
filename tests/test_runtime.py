@@ -77,6 +77,40 @@ def test_mlx_runtime_does_not_require_tflite_tokenizer(tmp_path, monkeypatch):
     assert runtime.backend_ready("mlx")
 
 
+def test_model_link_outside_data_root_is_not_ready(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENT_AUDIO_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(runtime, "_venv_ready", lambda backend: backend == "mlx")
+    folder = runtime.runtime_paths().upstream / "optimized" / "mlx"
+    (folder / "scripts").mkdir(parents=True)
+    (folder / "scripts" / "sa3_mlx.py").write_text("# runtime entry point")
+    outside = tmp_path / "outside.npz"
+    with zipfile.ZipFile(outside, "w") as archive:
+        archive.writestr("test.npy", b"model fixture")
+    for path in runtime._model_paths("mlx"):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(outside.read_bytes())
+    assert runtime.backend_ready("mlx")
+    linked = runtime._model_paths("mlx")[0]
+    linked.unlink()
+    try:
+        linked.symlink_to(outside)
+    except OSError:
+        pytest.skip("symlink creation privilege unavailable")
+    assert not runtime.backend_ready("mlx")
+
+
+@pytest.mark.parametrize("isolated", [True, False])
+def test_venv_with_system_site_packages_is_not_ready(tmp_path, monkeypatch, isolated):
+    monkeypatch.setenv("AGENT_AUDIO_HOME", str(tmp_path))
+    python = runtime.runtime_python("tflite")
+    python.parent.mkdir(parents=True)
+    python.write_text("")
+    (python.parents[1] / "pyvenv.cfg").write_text(
+        f"home = /usr/bin\ninclude-system-site-packages = {str(not isolated).lower()}\n"
+    )
+    assert runtime._venv_ready("tflite") is isolated
+
+
 def test_generation_logs_do_not_corrupt_mcp_stdout(tmp_path, monkeypatch, capfd):
     monkeypatch.setenv("AGENT_AUDIO_HOME", str(tmp_path))
     monkeypatch.setattr(runtime, "detect_environment", lambda: None)
