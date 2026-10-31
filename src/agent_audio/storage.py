@@ -25,15 +25,21 @@ def read_optional(path: Path) -> bytes | None:
 
 
 @contextmanager
-def file_lock(path: Path) -> Iterator[None]:
+def file_lock(path: Path, activity: str = "install") -> Iterator[None]:
     """Coordinate Agent Audio writers; never remove someone else's lock."""
     path.parent.mkdir(parents=True, exist_ok=True)
     lock = path.with_name(path.name + ".agent-audio.lock")
     try:
         fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     except FileExistsError as exc:
+        try:
+            owner = lock.read_text(encoding="ascii").strip()
+        except (OSError, UnicodeDecodeError):
+            owner = ""
+        held_by = f", held by PID {owner}" if owner.isdigit() else ""
         raise RuntimeError(
-            f"Another install may be using {path}; lock exists: {lock}"
+            f"Another {activity} may be using {path}; lock exists: {lock}"
+            f"{held_by}. Remove the lock only after that process has exited."
         ) from exc
     try:
         os.write(fd, str(os.getpid()).encode("ascii"))

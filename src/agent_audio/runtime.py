@@ -361,7 +361,7 @@ def generate_audio(
         )
     destination.parent.mkdir(parents=True, exist_ok=True)
     # Serial inference avoids simultaneous native weight-cache writes and memory spikes.
-    with file_lock(paths.root / "generation"):
+    with file_lock(paths.root / "generation", activity="generation"):
         with tempfile.TemporaryDirectory(
             prefix=".agent-audio-render-", dir=destination.parent
         ) as stage:

@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from agent_audio.storage import atomic_write, file_lock, read_optional
@@ -40,3 +42,15 @@ def test_repeated_edits_keep_distinct_backups(tmp_path):
         atomic_write(config, b"first", b"second")
         atomic_write(config, b"second", b"third")
     assert {p.read_bytes() for p in tmp_path.glob("*.bak")} == {b"first", b"second"}
+
+
+def test_busy_lock_names_activity_and_owner_pid(tmp_path):
+    work = tmp_path / "generation"
+    with file_lock(work, activity="generation"):
+        with pytest.raises(RuntimeError) as busy:
+            with file_lock(work, activity="generation"):
+                pytest.fail("must not enter")
+    message = str(busy.value)
+    assert "Another generation" in message
+    assert "install" not in message
+    assert f"PID {os.getpid()}" in message
