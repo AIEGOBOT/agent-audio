@@ -255,3 +255,24 @@ def test_report_escapes_run_id_script_terminator(tmp_path):
     document = write_report(tmp_path).read_text(encoding="utf-8")
     assert 'const runId="\\u003c/script>' in document
     assert "<script>bad" not in document
+
+
+def test_report_audio_names_do_not_reveal_models(tmp_path):
+    cases = benchmark.expand_cases(benchmark.load_manifest(MANIFEST), smoke=True)[:2]
+    (tmp_path / "audio").mkdir()
+    for case in cases:
+        (tmp_path / "audio" / f"{case['case_id']}.wav").write_bytes(
+            case["model"].encode()
+        )
+    (tmp_path / "results.jsonl").write_text(
+        "\n".join(json.dumps({**case, "success": True}) for case in cases),
+        encoding="utf-8",
+    )
+    document = write_report(tmp_path).read_text(encoding="utf-8")
+    pairs = json.loads(document.split("const pairs=", 1)[1].split(", fields=", 1)[0])
+    (pair,) = pairs
+    for side in ("A", "B"):
+        url = pair[side]["url"]
+        assert "small" not in url and "medium" not in url
+        assert (tmp_path / url).read_bytes() == pair[side]["model"].encode()
+    write_report(tmp_path, replace=True)
