@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import uuid
 import wave
 from dataclasses import dataclass
@@ -327,6 +328,7 @@ def generate_audio(
     seconds: float = 10.0,
     output_path: str | None = None,
     negative_prompt: str | None = None,
+    cancel: threading.Event | None = None,
 ) -> Path:
     if (
         not prompt.strip()
@@ -378,6 +380,7 @@ def generate_audio(
                     env,
                     GENERATION_TIMEOUT,
                     log_dir=paths.root / "logs",
+                    cancel=cancel,
                 )
             except subprocess.TimeoutExpired as exc:
                 log_path = getattr(exc, "log_path", None)

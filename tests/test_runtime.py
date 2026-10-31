@@ -261,7 +261,7 @@ def test_prompt_metacharacters_are_literal_and_raced_output_is_preserved(
     destination = tmp_path / "out.wav"
     prompt = '-n " & echo INJECTED | %PATH% ; $(touch marker)'
 
-    def render(command, cwd, env, timeout, log_dir):
+    def render(command, cwd, env, timeout, log_dir, cancel):
         assert f"--prompt={prompt}" in command
         assert env["HF_HUB_OFFLINE"] == "1"
         path = command[command.index("--out") + 1]
@@ -293,3 +293,23 @@ def test_timeout_kills_descendants(tmp_path):
     assert spawned.exists()
     time.sleep(2.2)
     assert not finished.exists()
+
+
+def test_cancel_event_stops_inference(tmp_path):
+    import threading
+    import time
+
+    from agent_audio.process import run_inference
+
+    cancel = threading.Event()
+    threading.Timer(0.3, cancel.set).start()
+    started = time.monotonic()
+    with pytest.raises(RuntimeError, match="cancelled"):
+        run_inference(
+            [sys.executable, "-c", "import time; time.sleep(30)"],
+            tmp_path,
+            runtime.runtime_environment(),
+            30,
+            cancel=cancel,
+        )
+    assert time.monotonic() - started < 5

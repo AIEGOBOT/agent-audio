@@ -7,8 +7,29 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 from pathlib import Path
 from typing import Callable
+
+
+def _wait(
+    process: subprocess.Popen, timeout: float, cancel: threading.Event | None
+) -> int:
+    if cancel is None:
+        return process.wait(timeout=timeout)
+    # Poll so that another thread can stop inference through the event.
+    deadline = time.monotonic() + timeout
+    while True:
+        if cancel.is_set():
+            raise RuntimeError("Stable Audio generation was cancelled.")
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise subprocess.TimeoutExpired(process.args, timeout)
+        try:
+            return process.wait(timeout=min(0.1, remaining))
+        except subprocess.TimeoutExpired:
+            pass
 
 
 def run_inference(
@@ -18,6 +39,7 @@ def run_inference(
     timeout: float,
     on_start: Callable[[int], None] | None = None,
     log_dir: Path | None = None,
+    cancel: threading.Event | None = None,
 ) -> None:
     # The MCP host owns stderr and may close its reader while this server stays
     # alive. A child inheriting that pipe can fail while flushing Python's
@@ -69,7 +91,7 @@ def run_inference(
                             handle.Close()
                     if on_start is not None:
                         on_start(process.pid)
-                    code = process.wait(timeout=timeout)
+                    code = _wait(process, timeout, cancel)
                     if code:
                         # Do not put model logs in an MCP response: they may
                         # contain the prompt. Keep the file for local diagnosis.

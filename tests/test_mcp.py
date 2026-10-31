@@ -3,6 +3,8 @@ import datetime
 import os
 import signal
 import sys
+import threading
+import time
 import wave
 
 import pytest
@@ -77,6 +79,8 @@ def test_successful_generation_tool_dispatch(tmp_path, monkeypatch):
     content, structured = result
     assert any(getattr(block, "text", None) == str(output) for block in content)
     assert structured == {"result": str(output)}
+    cancel = calls[0].pop("cancel")
+    assert cancel.is_set()
     assert calls == [
         {
             "prompt": "metal impact",
@@ -146,6 +150,9 @@ def test_sigterm_during_generation_releases_lock_and_stops_runtime(tmp_path):
                     await asyncio.sleep(0.05)
                 runtime_pid, server_pid = map(int, marker.read_text().split())
                 assert lock.exists()
+                # The event loop still answers while inference runs.
+                status = await session.call_tool("audio_status", {})
+                assert not status.isError
                 os.kill(server_pid, signal.SIGTERM)
                 for _ in range(100):
                     if not lock.exists() and not alive(runtime_pid):
@@ -165,3 +172,31 @@ def test_sigterm_during_generation_releases_lock_and_stops_runtime(tmp_path):
     finally:
         if runtime_pid is not None and alive(runtime_pid):
             os.killpg(runtime_pid, signal.SIGKILL)
+
+
+def test_generation_runs_off_event_loop_and_stops_on_cancel(monkeypatch):
+    seen = {}
+
+    def blocking(**kwargs):
+        seen.update(kwargs)
+        (kwargs.get("cancel") or threading.Event()).wait(3)
+        raise RuntimeError("stopped")
+
+    monkeypatch.setattr(mcp_server, "_generate_audio", blocking)
+
+    async def probe():
+        call = asyncio.create_task(
+            mcp_server.mcp.call_tool("generate_audio", {"prompt": "x", "seconds": 1})
+        )
+        gap, last = 0.0, time.monotonic()
+        for _ in range(10):
+            await asyncio.sleep(0.05)
+            now = time.monotonic()
+            gap, last = max(gap, now - last), now
+        call.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await call
+        return gap
+
+    assert asyncio.run(probe()) < 0.5
+    assert seen["cancel"].is_set()

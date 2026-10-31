@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import signal
+import threading
+from functools import partial
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
@@ -10,6 +13,8 @@ from .runtime import backend_ready, runtime_details, runtime_paths
 from .runtime import generate_audio as _generate_audio
 
 mcp = FastMCP("agent-audio")
+# Stop events of generations in progress, for cancellation and SIGTERM.
+_active_generations: set[threading.Event] = set()
 
 
 @mcp.tool()
@@ -31,7 +36,7 @@ def audio_status() -> dict[str, object]:
 
 
 @mcp.tool()
-def generate_audio(
+async def generate_audio(
     prompt: str,
     seconds: float = 10.0,
     output_path: str | None = None,
@@ -44,19 +49,36 @@ def generate_audio(
     The current backends reject nonempty negative_prompt; use prompt to describe
     the desired sound. audio_status reports capabilities and readiness check scope.
     """
-    path: Path = _generate_audio(
-        prompt=prompt,
-        seconds=seconds,
-        output_path=output_path,
-        negative_prompt=negative_prompt,
-    )
+    # A worker thread keeps the event loop free for cancellation, ping and
+    # audio_status while inference runs.
+    cancel = threading.Event()
+    _active_generations.add(cancel)
+    try:
+        path: Path = await asyncio.to_thread(
+            partial(
+                _generate_audio,
+                prompt=prompt,
+                seconds=seconds,
+                output_path=output_path,
+                negative_prompt=negative_prompt,
+                cancel=cancel,
+            )
+        )
+    finally:
+        # On cancellation, this stops the runtime. The worker thread then
+        # removes the generation lock and the staged render.
+        cancel.set()
+        _active_generations.discard(cancel)
     return str(path)
 
 
 def _exit_on_sigterm(signum: int, frame: object) -> None:
     # Default SIGTERM handling skips finally blocks. A host that stops this
     # server during generation would then leave the generation lock and an
-    # orphaned runtime process group. SystemExit runs that cleanup.
+    # orphaned runtime process group. The stop events end inference in the
+    # worker threads, and SystemExit runs the cleanup in this thread.
+    for cancel in list(_active_generations):
+        cancel.set()
     raise SystemExit(128 + signum)
 
 
