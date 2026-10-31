@@ -12,6 +12,8 @@ import time
 from pathlib import Path
 from typing import Callable
 
+LOG_REMOVE_ATTEMPTS = 10
+
 
 def _wait(
     process: subprocess.Popen, timeout: float, cancel: threading.Event | None
@@ -122,9 +124,25 @@ def run_inference(
         if job is not None:
             job.Close()
         if not keep_log:
-            try:
-                log_path.unlink(missing_ok=True)
-            except PermissionError:
-                # Windows can keep the file open briefly while descendants of
-                # a completed runtime process exit after their job is closed.
-                pass
+            _remove_log(log_path)
+
+
+def _remove_log(log_path: Path) -> None:
+    # Windows can keep the file open briefly while descendants of a completed
+    # runtime process exit after their job is closed.
+    for attempt in range(LOG_REMOVE_ATTEMPTS):
+        try:
+            log_path.unlink(missing_ok=True)
+            return
+        except PermissionError:
+            if attempt + 1 < LOG_REMOVE_ATTEMPTS:
+                time.sleep(0.2)
+    # The log may contain the prompt, so tell the local user where it is.
+    try:
+        print(
+            f"Could not delete local log {log_path}; it may contain the prompt.",
+            file=sys.stderr,
+            flush=True,
+        )
+    except (OSError, ValueError):
+        pass
