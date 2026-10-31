@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import platform
+import re
 import shutil
 import subprocess
 from dataclasses import asdict, dataclass
@@ -27,6 +28,8 @@ def _command_output(command: list[str]) -> str:
     try:
         completed = subprocess.run(
             command,
+            # Keep the MCP JSON-RPC stdin away from probe processes.
+            stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
             timeout=5,
@@ -59,8 +62,12 @@ def _detect_intel_graphics() -> bool:
     elif system == "Darwin":
         output = _command_output(["system_profiler", "SPDisplaysDataType"])
     else:
-        output = _command_output(
-            ["sh", "-lc", "lspci 2>/dev/null | grep -Ei 'vga|3d|display'"]
+        # Run lspci directly: a login shell would source user profile scripts.
+        lspci = shutil.which("lspci")
+        output = "\n".join(
+            line
+            for line in (_command_output([lspci]) if lspci else "").splitlines()
+            if re.search(r"vga|3d|display", line, re.IGNORECASE)
         )
     low = output.lower()
     return "intel" in low or "arc" in low
