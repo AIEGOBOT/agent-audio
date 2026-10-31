@@ -22,6 +22,7 @@ from .storage import file_lock, reject_link
 UPSTREAM_REPO = "https://github.com/Stability-AI/stable-audio-3.git"
 UPSTREAM_REVISION = "779434a908193105335fd8d833418603625b2859"
 GENERATION_TIMEOUT = 540  # Leave room for MCP transport within Codex's 600 seconds.
+SAMPLE_RATE = 44100  # Both pinned Stable Audio 3 scripts write 44.1 kHz audio.
 
 
 @dataclass(frozen=True)
@@ -336,8 +337,12 @@ def generate_audio(
         or (negative_prompt and "\0" in negative_prompt)
     ):
         raise ValueError("prompt must be non-empty and prompts must not contain NUL")
-    if not math.isfinite(seconds) or seconds <= 0 or seconds > 380:
-        raise ValueError("seconds must be finite, > 0 and <= 380")
+    # The runtimes cut output to round(seconds * SAMPLE_RATE) samples, so a
+    # shorter request would run full inference and then fail with no frames.
+    if not math.isfinite(seconds) or round(seconds * SAMPLE_RATE) < 1 or seconds > 380:
+        raise ValueError(
+            f"seconds must be finite, at least one sample (1/{SAMPLE_RATE}) and <= 380"
+        )
     backend = recommended_backend(detect_environment())
     adapter = get_backend(backend)
     adapter.validate_negative_prompt(negative_prompt)

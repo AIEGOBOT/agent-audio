@@ -199,7 +199,7 @@ def test_runtime_command_uses_dedicated_python_without_shell(tmp_path, monkeypat
 
 
 @pytest.mark.parametrize(
-    "seconds", [float("nan"), float("inf"), -float("inf"), 0, -1, 381]
+    "seconds", [float("nan"), float("inf"), -float("inf"), 0, -1, 1e-5, 381]
 )
 def test_invalid_durations_rejected_before_starting_anything(seconds, monkeypatch):
     monkeypatch.setattr(
