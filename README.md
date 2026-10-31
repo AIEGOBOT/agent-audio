@@ -213,6 +213,11 @@ verification and unperformed checksum, dependency-health and generation checks.
 `capabilities.negative_prompt` is false under the current CFG 1.0 policy;
 nonempty negative prompts are rejected.
 
+`generate_audio` runs one generation at a time for each data folder
+(`AGENT_AUDIO_HOME`). A call made while another generation runs does not wait.
+It fails at once with an `Another generation may be using ...` lock error.
+Make calls one after another, and wait for each result before the next call.
+
 ```json
 {
   "prompt": "Heavy metallic impact, sharp transient, isolated sound effect, no voice, no music",

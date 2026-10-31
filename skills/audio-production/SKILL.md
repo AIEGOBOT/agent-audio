@@ -62,6 +62,8 @@ file actually loops cleanly.
    `output_path` in the intended project asset directory. Omitting the path uses
    Agent Audio's output folder; move/copy and integrate the asset when required.
    Never overwrite existing outputs or assume a failed call produced a new file.
+   Make one `generate_audio` call at a time and wait for its result. A parallel
+   call fails at once with a generation lock error; it does not queue.
 4. Generate only the distinct assets the task needs. Reuse assets where
    appropriate; do not request large candidate batches by default. When another
    candidate is justified, change the acoustic direction deliberately. Stop

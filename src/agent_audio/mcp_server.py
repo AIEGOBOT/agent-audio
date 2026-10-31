@@ -48,6 +48,9 @@ async def generate_audio(
     The caller should choose a meaningful output path when integrating into a project.
     The current backends reject nonempty negative_prompt; use prompt to describe
     the desired sound. audio_status reports capabilities and readiness check scope.
+    Only one generation runs at a time for each Agent Audio data folder. A call
+    made while another generation runs fails at once with a lock error. Wait for
+    each call to return before the next call; do not call this tool in parallel.
     """
     # A worker thread keeps the event loop free for cancellation, ping and
     # audio_status while inference runs.

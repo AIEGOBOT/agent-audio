@@ -200,3 +200,36 @@ def test_generation_runs_off_event_loop_and_stops_on_cancel(monkeypatch):
 
     assert asyncio.run(probe()) < 0.5
     assert seen["cancel"].is_set()
+
+
+def test_parallel_generation_fails_at_once_with_lock_error(monkeypatch, tmp_path):
+    # The README and the tool description say that a parallel call does not wait.
+    from agent_audio.storage import file_lock
+
+    started, release = threading.Event(), threading.Event()
+
+    def locked(**kwargs):
+        with file_lock(tmp_path / "generation", activity="generation"):
+            started.set()
+            release.wait(3)
+        return tmp_path / "first.wav"
+
+    monkeypatch.setattr(mcp_server, "_generate_audio", locked)
+
+    async def probe():
+        first = asyncio.create_task(
+            mcp_server.mcp.call_tool("generate_audio", {"prompt": "x", "seconds": 1})
+        )
+        while not started.is_set():
+            await asyncio.sleep(0.01)
+        begin = time.monotonic()
+        with pytest.raises(Exception, match="Another generation may be using"):
+            await mcp_server.mcp.call_tool(
+                "generate_audio", {"prompt": "y", "seconds": 1}
+            )
+        waited = time.monotonic() - begin
+        release.set()
+        await first
+        return waited
+
+    assert asyncio.run(probe()) < 1.0
