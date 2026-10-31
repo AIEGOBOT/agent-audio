@@ -238,6 +238,16 @@ def test_truncated_wav_rejected(tmp_path):
         runtime._validate_wav(path, 3)
 
 
+@pytest.mark.parametrize("frames", [80000, 0], ids=["ten_seconds", "no_frames"])
+def test_wav_with_wrong_duration_rejected(tmp_path, frames):
+    path = tmp_path / "wrong.wav"
+    with wave.open(str(path), "wb") as audio:
+        audio.setparams((1, 2, 8000, 0, "NONE", ""))
+        audio.writeframes(b"\0\0" * frames)
+    with pytest.raises(RuntimeError, match="unexpected duration"):
+        runtime._validate_wav(path, 3)
+
+
 def test_inference_timeout_stops_process(tmp_path):
     from agent_audio.process import run_inference
 
