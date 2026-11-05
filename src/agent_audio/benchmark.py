@@ -487,7 +487,7 @@ def run(manifest_path: Path, output: Path, *, smoke: bool = False) -> list[dict]
     )
     records = []
     model_runs = Counter()
-    with file_lock(runtime_paths().root / "generation"):
+    with file_lock(runtime_paths().root / "generation", activity="generation"):
         with (output / "results.jsonl").open("x", encoding="utf-8") as stream:
             for index, case in enumerate(cases, 1):
                 print(f"[{index}/{len(cases)}] {case['case_id']}", flush=True)

@@ -5,7 +5,11 @@ from __future__ import annotations
 import hashlib
 import html
 import json
+import os
+import shutil
 from pathlib import Path
+
+from .storage import reject_link
 
 
 def _pairs(
@@ -45,11 +49,41 @@ def _pairs(
                 "prompt_ko": translations.get(item_id, ""),
                 "duration": duration,
                 "seed": small["seed"],
-                "A": {"model": a["model"], "url": f"audio/{a['case_id']}.wav"},
-                "B": {"model": b["model"], "url": f"audio/{b['case_id']}.wav"},
+                # Case IDs name the model, so samples get neutral file names.
+                "A": {
+                    "model": a["model"],
+                    "url": f"blind/{digest[:16]}-A.wav",
+                    "source": f"audio/{a['case_id']}.wav",
+                },
+                "B": {
+                    "model": b["model"],
+                    "url": f"blind/{digest[:16]}-B.wav",
+                    "source": f"audio/{b['case_id']}.wav",
+                },
             }
         )
     return result
+
+
+def _link_blind_sample(source: Path, target: Path) -> None:
+    """Expose an output under a name that does not identify its model."""
+    if not source.is_file():
+        return  # The player shows the sample as unavailable.
+    target.parent.mkdir(exist_ok=True)
+    reject_link(target)
+    if target.exists():
+        if target.read_bytes() == source.read_bytes():
+            return
+        raise FileExistsError(f"Blind sample exists with other audio: {target}")
+    try:
+        os.link(source, target)
+    except FileExistsError:
+        raise
+    except OSError:
+        # Keep the fallback for filesystems without hardlinks, but acquire the
+        # destination exclusively: a raced file or symlink must be preserved.
+        with source.open("rb") as src, target.open("xb") as dst:
+            shutil.copyfileobj(src, dst)
 
 
 def write_report(output: Path, *, replace: bool = False) -> Path:
@@ -95,6 +129,10 @@ def write_report(output: Path, *, replace: bool = False) -> Path:
         ).hexdigest()
     )
     pairs = _pairs(rows, translations, run_id=run_id)
+    for pair in pairs:
+        for side in ("A", "B"):
+            source = pair[side].pop("source")
+            _link_blind_sample(output / source, output / pair[side]["url"])
     retained = len(rows)
     planned = metadata.get("cases")
     pruned = (
