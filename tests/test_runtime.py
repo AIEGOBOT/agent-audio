@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import threading
 import wave
 import zipfile
 from pathlib import Path
@@ -415,3 +416,46 @@ def test_cancel_event_stops_inference(tmp_path):
             cancel=cancel,
         )
     assert time.monotonic() - started < 5
+
+
+@pytest.mark.parametrize("phase", ["log_cleanup", "wav_validation"])
+def test_late_cancellation_does_not_publish_wav(tmp_path, monkeypatch, phase):
+    from agent_audio import process
+
+    _ready_without_inference(monkeypatch, tmp_path)
+    monkeypatch.setattr(runtime, "run_inference", process.run_inference)
+    child = (
+        "import sys,wave; "
+        "w=wave.open(sys.argv[sys.argv.index('--out')+1], 'wb'); "
+        "w.setparams((1,2,8000,0,'NONE','')); "
+        "w.writeframes(b'\\0\\0'*8000); w.close()"
+    )
+    monkeypatch.setattr(
+        runtime, "_runtime_command", lambda _: ([sys.executable, "-c", child], tmp_path)
+    )
+    cancel = threading.Event()
+    owner, name = (
+        (process, "_remove_log")
+        if phase == "log_cleanup"
+        else (runtime, "_validate_wav")
+    )
+    original = getattr(owner, name)
+
+    def cancel_after(*args):
+        original(*args)
+        cancel.set()
+
+    monkeypatch.setattr(owner, name, cancel_after)
+    monkeypatch.setattr(
+        runtime.os,
+        "link",
+        lambda *args: pytest.fail("Cancelled audio must not reach publication"),
+    )
+    output = tmp_path / "impact.wav"
+    with pytest.raises(RuntimeError, match="cancelled"):
+        runtime.generate_audio("impact", 1, str(output), cancel=cancel)
+    assert cancel.is_set()
+    assert not output.exists()
+    assert not list(tmp_path.glob(".agent-audio-render-*"))
+    assert not (runtime.data_root() / "generation.agent-audio.lock").exists()
+    assert not list((runtime.data_root() / "logs").glob("*.log"))

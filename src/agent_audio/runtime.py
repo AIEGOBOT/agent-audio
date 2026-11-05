@@ -396,6 +396,10 @@ def generate_audio(
             if not temporary.is_file():
                 raise RuntimeError("Runtime completed without producing a WAV.")
             _validate_wav(temporary, seconds)
+            # Cancellation can arrive after process.wait(), while logs or the
+            # staged WAV are being checked. Publication is the commit point.
+            if cancel is not None and cancel.is_set():
+                raise RuntimeError("Stable Audio generation was cancelled.")
             # Same-volume hardlink publishes atomically and fails if another writer
             # created the destination. It never replaces existing files/symlinks.
             os.link(temporary, destination)

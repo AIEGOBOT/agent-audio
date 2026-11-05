@@ -6,6 +6,7 @@ import threading
 from functools import partial
 from pathlib import Path
 
+from anyio import CancelScope
 from mcp.server.fastmcp import FastMCP
 
 from .detect import detect_environment, recommended_backend
@@ -56,8 +57,8 @@ async def generate_audio(
     # audio_status while inference runs.
     cancel = threading.Event()
     _active_generations.add(cancel)
-    try:
-        path: Path = await asyncio.to_thread(
+    worker = asyncio.create_task(
+        asyncio.to_thread(
             partial(
                 _generate_audio,
                 prompt=prompt,
@@ -67,9 +68,28 @@ async def generate_audio(
                 cancel=cancel,
             )
         )
+    )
+    try:
+        # Keep a joinable worker when the request task is cancelled.
+        path: Path = await asyncio.shield(worker)
+    except asyncio.CancelledError:
+        cancel.set()
+        # MCP uses AnyIO level cancellation; every unshielded await in its
+        # cancelled scope would raise again. Direct Task.cancel() can also
+        # recur during cleanup, so shield the worker and keep joining it.
+        with CancelScope(shield=True):
+            while not worker.done():
+                try:
+                    await asyncio.shield(worker)
+                except asyncio.CancelledError:
+                    continue
+                except Exception:
+                    break
+            if not worker.cancelled():
+                worker.exception()  # Retrieve errors without masking cancellation.
+        raise
     finally:
-        # On cancellation, this stops the runtime. The worker thread then
-        # removes the generation lock and the staged render.
+        # Keep the event registered until worker cleanup releases its resources.
         cancel.set()
         _active_generations.discard(cancel)
     return str(path)

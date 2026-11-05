@@ -77,8 +77,13 @@ def _link_blind_sample(source: Path, target: Path) -> None:
         raise FileExistsError(f"Blind sample exists with other audio: {target}")
     try:
         os.link(source, target)
+    except FileExistsError:
+        raise
     except OSError:
-        shutil.copyfile(source, target)
+        # Keep the fallback for filesystems without hardlinks, but acquire the
+        # destination exclusively: a raced file or symlink must be preserved.
+        with source.open("rb") as src, target.open("xb") as dst:
+            shutil.copyfileobj(src, dst)
 
 
 def write_report(output: Path, *, replace: bool = False) -> Path:

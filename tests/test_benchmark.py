@@ -1,12 +1,14 @@
+import errno
 import json
+import os
 import wave
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from agent_audio import benchmark
-from agent_audio.benchmark_report import _pairs, write_report
+from agent_audio import benchmark, benchmark_report
+from agent_audio.benchmark_report import _link_blind_sample, _pairs, write_report
 from agent_audio.profiles import PROFILES, tflite_command
 
 MANIFEST = (
@@ -276,3 +278,50 @@ def test_report_audio_names_do_not_reveal_models(tmp_path):
         assert "small" not in url and "medium" not in url
         assert (tmp_path / url).read_bytes() == pair[side]["model"].encode()
     write_report(tmp_path, replace=True)
+
+
+@pytest.mark.parametrize("link_error", [errno.EEXIST, errno.EXDEV])
+@pytest.mark.parametrize("competitor", ["file", "symlink"])
+def test_blind_sample_preserves_raced_destination(
+    tmp_path, monkeypatch, link_error, competitor
+):
+    source, target = tmp_path / "source.wav", tmp_path / "blind.wav"
+    victim = tmp_path / "keep.wav"
+    source.write_bytes(b"new audio")
+    victim.write_bytes(b"keep")
+    if competitor == "symlink":
+        try:
+            target.symlink_to(victim)
+        except OSError:
+            pytest.skip("symlink creation privilege unavailable")
+        target.unlink()
+    real_link = os.link
+
+    def race(src, dst):
+        if src == source:
+            if competitor == "symlink":
+                target.symlink_to(victim)
+            else:
+                target.write_bytes(b"competing audio")
+            raise OSError(link_error, "raced link")
+        real_link(src, dst)
+
+    monkeypatch.setattr(benchmark_report.os, "link", race)
+    with pytest.raises(FileExistsError):
+        _link_blind_sample(source, target)
+    assert victim.read_bytes() == b"keep"
+    assert target.read_bytes() == (
+        b"keep" if competitor == "symlink" else b"competing audio"
+    )
+
+
+def test_blind_sample_copy_fallback_without_hardlink_support(tmp_path, monkeypatch):
+    source, target = tmp_path / "source.wav", tmp_path / "blind.wav"
+    source.write_bytes(b"audio")
+
+    def cross_device(src, dst):
+        raise OSError(errno.EXDEV, "cross-device link")
+
+    monkeypatch.setattr(benchmark_report.os, "link", cross_device)
+    _link_blind_sample(source, target)
+    assert target.read_bytes() == b"audio"
