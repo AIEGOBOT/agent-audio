@@ -16,7 +16,7 @@ listening quality still need end-to-end validation.
 
 [Install](#install-with-an-ai-agent) · [Usage](#using-agent-audio) ·
 [Support and limits](#current-status) · [Update](#updating-an-existing-installation) ·
-[Get help](#troubleshooting-and-help)
+[Get help](#troubleshooting-and-help) · [Contribute](CONTRIBUTING.md)
 
 ## Before you install
 
@@ -142,13 +142,33 @@ unrelated settings. Your agent can follow the
 | A WAV exists but is not used in the project | Check the agent's access to the project and its editing tools. File generation and final integration are separate steps. |
 
 Search [existing issues](https://github.com/AIEGOBOT/agent-audio/issues) or
-[report a problem](https://github.com/AIEGOBOT/agent-audio/issues/new). Include OS,
+[report a problem](https://github.com/AIEGOBOT/agent-audio/issues/new/choose). Include OS,
 RAM, CPU/GPU, client/version, Agent Audio commit, backend, reproduction steps
 and the exact error. State whether setup, generation or integration failed.
 
 Review logs before sharing. **Do not post credentials, full client configuration,
 private prompts or personal paths.** Follow [SECURITY.md](SECURITY.md) for security
 concerns rather than posting sensitive details publicly.
+
+Early testers can also share a successful or unsuccessful installation or
+game/video workflow using the experience-report issue template. Reports in
+English or Korean are welcome. Report whether the agent used audio on its own,
+whether it reached the finished project, and what you actually heard; a WAV
+alone does not answer those questions.
+
+### Disabling or removing Agent Audio
+
+Ask your agent to identify the active client's `agent-audio` MCP entry and
+`audio-production` Skill path before making changes. Removing the Skill alone
+does not unregister or stop the MCP server. To disable both, remove only those
+Agent Audio entries after preserving any customizations, then restart the
+affected client. Do not replace the whole client configuration.
+
+The runtime/models and generated audio remain separate from client registration.
+Keep them for reuse unless you explicitly want them removed. Before reclaiming
+disk space, check the actual `AGENT_AUDIO_HOME`, retain wanted outputs and confirm
+that another client does not use the same installation. There is no automated
+uninstaller in this preview.
 
 <a id="model-licenses"></a>
 
@@ -243,8 +263,9 @@ uv run --frozen python install/bootstrap.py --doctor
 |---|---|
 | Installing agent | [INSTALL_AGENT.md](INSTALL_AGENT.md) |
 | User checking resource needs | [Resource measurements](docs/resource-requirements.md) |
-| Contributor | [Repository instructions](AGENTS.md) and [architecture](ARCHITECTURE.md) |
+| Contributor | [Contributing](CONTRIBUTING.md), [repository instructions](AGENTS.md) and [architecture](ARCHITECTURE.md) |
 | Maintainer validating real work | [Project direction](docs/project-direction.md) and [end-to-end validation](docs/end-to-end-validation.md) |
+| Maintainer preparing community distribution | [Preview release checklist](docs/release-readiness.md) |
 | Comparing models | [Small-SFX versus Medium benchmark](benchmarks/sfx_model_compare/README.md) |
 
 Source is in `src/agent_audio/`, setup starts at `install/bootstrap.py`, the
