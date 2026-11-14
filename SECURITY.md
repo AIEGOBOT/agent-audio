@@ -65,8 +65,10 @@ existing user directory.
 Prompts are passed as arguments to a Python executable, never through a shell.
 stdin is disconnected and diagnostic output goes to a private local log file
 to protect the MCP JSON-RPC channel and avoid broken host stderr pipes. Logs
-are deleted after successful runs; a failed inference retains its log under
-`AGENT_AUDIO_HOME/logs` (or `~/.agent-audio/logs`) and reports its path. These
+are deleted after successful runs. If Windows keeps a successful run's log
+locked after several retries, the server writes the log path to its stderr. A
+failed inference retains its log under `AGENT_AUDIO_HOME/logs` (or
+`~/.agent-audio/logs`) and reports its path. These
 logs may contain prompts, so review them before sharing. Inference is serialized
 to protect native caches/memory, with a 540-second process-tree timeout (Codex's
 new entry gets 600 seconds).

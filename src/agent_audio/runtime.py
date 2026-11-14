@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import uuid
 import wave
 from dataclasses import dataclass
@@ -21,6 +22,7 @@ from .storage import file_lock, reject_link
 UPSTREAM_REPO = "https://github.com/Stability-AI/stable-audio-3.git"
 UPSTREAM_REVISION = "779434a908193105335fd8d833418603625b2859"
 GENERATION_TIMEOUT = 540  # Leave room for MCP transport within Codex's 600 seconds.
+SAMPLE_RATE = 44100  # Both pinned Stable Audio 3 scripts write 44.1 kHz audio.
 
 
 @dataclass(frozen=True)
@@ -327,6 +329,7 @@ def generate_audio(
     seconds: float = 10.0,
     output_path: str | None = None,
     negative_prompt: str | None = None,
+    cancel: threading.Event | None = None,
 ) -> Path:
     if (
         not prompt.strip()
@@ -334,8 +337,12 @@ def generate_audio(
         or (negative_prompt and "\0" in negative_prompt)
     ):
         raise ValueError("prompt must be non-empty and prompts must not contain NUL")
-    if not math.isfinite(seconds) or seconds <= 0 or seconds > 380:
-        raise ValueError("seconds must be finite, > 0 and <= 380")
+    # The runtimes cut output to round(seconds * SAMPLE_RATE) samples, so a
+    # shorter request would run full inference and then fail with no frames.
+    if not math.isfinite(seconds) or round(seconds * SAMPLE_RATE) < 1 or seconds > 380:
+        raise ValueError(
+            f"seconds must be finite, at least one sample (1/{SAMPLE_RATE}) and <= 380"
+        )
     backend = recommended_backend(detect_environment())
     adapter = get_backend(backend)
     adapter.validate_negative_prompt(negative_prompt)
@@ -359,7 +366,7 @@ def generate_audio(
         )
     destination.parent.mkdir(parents=True, exist_ok=True)
     # Serial inference avoids simultaneous native weight-cache writes and memory spikes.
-    with file_lock(paths.root / "generation"):
+    with file_lock(paths.root / "generation", activity="generation"):
         with tempfile.TemporaryDirectory(
             prefix=".agent-audio-render-", dir=destination.parent
         ) as stage:
@@ -378,6 +385,7 @@ def generate_audio(
                     env,
                     GENERATION_TIMEOUT,
                     log_dir=paths.root / "logs",
+                    cancel=cancel,
                 )
             except subprocess.TimeoutExpired as exc:
                 log_path = getattr(exc, "log_path", None)
@@ -388,6 +396,10 @@ def generate_audio(
             if not temporary.is_file():
                 raise RuntimeError("Runtime completed without producing a WAV.")
             _validate_wav(temporary, seconds)
+            # Cancellation can arrive after process.wait(), while logs or the
+            # staged WAV are being checked. Publication is the commit point.
+            if cancel is not None and cancel.is_set():
+                raise RuntimeError("Stable Audio generation was cancelled.")
             # Same-volume hardlink publishes atomically and fails if another writer
             # created the destination. It never replaces existing files/symlinks.
             os.link(temporary, destination)
