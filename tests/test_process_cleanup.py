@@ -91,3 +91,23 @@ def test_native_parent_exit_stops_descendants(tmp_path, exit_code):
         )
     time.sleep(1.2)
     assert not finished.exists()
+
+
+def test_locked_log_after_success_is_retried_then_reported(
+    tmp_path, monkeypatch, capsys
+):
+    attempts = []
+    real_unlink = inference.Path.unlink
+
+    def locked(self, missing_ok=False):
+        if self.name.startswith("generation-"):
+            attempts.append(self)
+            raise PermissionError("held by a descendant")
+        return real_unlink(self, missing_ok=missing_ok)
+
+    monkeypatch.setattr(inference.Path, "unlink", locked)
+    monkeypatch.setattr(inference.time, "sleep", lambda seconds: None)
+    inference.run_inference([sys.executable, "-c", "pass"], tmp_path, {}, 5)
+
+    assert len(attempts) == inference.LOG_REMOVE_ATTEMPTS > 1
+    assert f"Could not delete local log {attempts[0]}" in capsys.readouterr().err
