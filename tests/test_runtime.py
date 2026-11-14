@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import threading
 import wave
 import zipfile
 from pathlib import Path
@@ -75,6 +76,40 @@ def test_mlx_runtime_does_not_require_tflite_tokenizer(tmp_path, monkeypatch):
             archive.writestr("test.npy", b"model fixture")
     assert not (folder / "models" / "tokenizer.model").exists()
     assert runtime.backend_ready("mlx")
+
+
+def test_model_link_outside_data_root_is_not_ready(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENT_AUDIO_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(runtime, "_venv_ready", lambda backend: backend == "mlx")
+    folder = runtime.runtime_paths().upstream / "optimized" / "mlx"
+    (folder / "scripts").mkdir(parents=True)
+    (folder / "scripts" / "sa3_mlx.py").write_text("# runtime entry point")
+    outside = tmp_path / "outside.npz"
+    with zipfile.ZipFile(outside, "w") as archive:
+        archive.writestr("test.npy", b"model fixture")
+    for path in runtime._model_paths("mlx"):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(outside.read_bytes())
+    assert runtime.backend_ready("mlx")
+    linked = runtime._model_paths("mlx")[0]
+    linked.unlink()
+    try:
+        linked.symlink_to(outside)
+    except OSError:
+        pytest.skip("symlink creation privilege unavailable")
+    assert not runtime.backend_ready("mlx")
+
+
+@pytest.mark.parametrize("isolated", [True, False])
+def test_venv_with_system_site_packages_is_not_ready(tmp_path, monkeypatch, isolated):
+    monkeypatch.setenv("AGENT_AUDIO_HOME", str(tmp_path))
+    python = runtime.runtime_python("tflite")
+    python.parent.mkdir(parents=True)
+    python.write_text("")
+    (python.parents[1] / "pyvenv.cfg").write_text(
+        f"home = /usr/bin\ninclude-system-site-packages = {str(not isolated).lower()}\n"
+    )
+    assert runtime._venv_ready("tflite") is isolated
 
 
 def test_generation_logs_do_not_corrupt_mcp_stdout(tmp_path, monkeypatch, capfd):
@@ -165,7 +200,7 @@ def test_runtime_command_uses_dedicated_python_without_shell(tmp_path, monkeypat
 
 
 @pytest.mark.parametrize(
-    "seconds", [float("nan"), float("inf"), -float("inf"), 0, -1, 381]
+    "seconds", [float("nan"), float("inf"), -float("inf"), 0, -1, 1e-5, 381]
 )
 def test_invalid_durations_rejected_before_starting_anything(seconds, monkeypatch):
     monkeypatch.setattr(
@@ -175,6 +210,64 @@ def test_invalid_durations_rejected_before_starting_anything(seconds, monkeypatc
     )
     with pytest.raises(ValueError):
         runtime.generate_audio("test", seconds)
+
+
+@pytest.mark.parametrize("prompt,negative_prompt", [("a\0b", None), ("impact", "\0")])
+def test_nul_in_prompts_rejected_before_starting_anything(
+    prompt, negative_prompt, monkeypatch
+):
+    monkeypatch.setattr(
+        runtime,
+        "detect_environment",
+        lambda: pytest.fail("Must validate before hardware probing"),
+    )
+    with pytest.raises(ValueError, match="NUL"):
+        runtime.generate_audio(prompt, 3, negative_prompt=negative_prompt)
+
+
+def _ready_without_inference(monkeypatch, tmp_path):
+    monkeypatch.setenv("AGENT_AUDIO_HOME", str(tmp_path / "data"))
+    monkeypatch.setattr(runtime, "detect_environment", lambda: None)
+    monkeypatch.setattr(runtime, "recommended_backend", lambda _: "tflite")
+    monkeypatch.setattr(runtime, "backend_ready", lambda _: True)
+    monkeypatch.setattr(runtime, "verify_upstream_checkout", lambda _: None)
+    monkeypatch.setattr(
+        runtime, "run_inference", lambda *a, **k: pytest.fail("must not render")
+    )
+
+
+def test_non_wav_output_path_rejected(tmp_path, monkeypatch):
+    _ready_without_inference(monkeypatch, tmp_path)
+    output = tmp_path / "out" / "notes.txt"
+    with pytest.raises(ValueError, match=".wav extension"):
+        runtime.generate_audio("impact", 3, str(output))
+    assert not output.parent.exists()
+
+
+def test_linked_output_path_rejected(tmp_path, monkeypatch):
+    _ready_without_inference(monkeypatch, tmp_path)
+    target = tmp_path / "elsewhere.wav"
+    output = tmp_path / "impact.wav"
+    try:
+        output.symlink_to(target)
+    except OSError:
+        pytest.skip("symlink creation privilege unavailable")
+    with pytest.raises(RuntimeError, match="link"):
+        runtime.generate_audio("impact", 3, str(output))
+    assert not target.exists()
+    assert output.is_symlink()
+
+
+def test_generation_rejected_while_generation_lock_is_held(tmp_path, monkeypatch):
+    from agent_audio.storage import file_lock
+
+    _ready_without_inference(monkeypatch, tmp_path)
+    output = tmp_path / "out" / "impact.wav"
+    with file_lock(runtime.runtime_paths().root / "generation"):
+        with pytest.raises(RuntimeError, match="Another generation"):
+            runtime.generate_audio("impact", 3, str(output))
+    assert not output.exists()
+    assert not list(output.parent.glob(".agent-audio-render-*"))
 
 
 def test_existing_output_is_never_replaced(tmp_path, monkeypatch):
@@ -238,6 +331,16 @@ def test_truncated_wav_rejected(tmp_path):
         runtime._validate_wav(path, 3)
 
 
+@pytest.mark.parametrize("frames", [80000, 0], ids=["ten_seconds", "no_frames"])
+def test_wav_with_wrong_duration_rejected(tmp_path, frames):
+    path = tmp_path / "wrong.wav"
+    with wave.open(str(path), "wb") as audio:
+        audio.setparams((1, 2, 8000, 0, "NONE", ""))
+        audio.writeframes(b"\0\0" * frames)
+    with pytest.raises(RuntimeError, match="unexpected duration"):
+        runtime._validate_wav(path, 3)
+
+
 def test_inference_timeout_stops_process(tmp_path):
     from agent_audio.process import run_inference
 
@@ -261,7 +364,7 @@ def test_prompt_metacharacters_are_literal_and_raced_output_is_preserved(
     destination = tmp_path / "out.wav"
     prompt = '-n " & echo INJECTED | %PATH% ; $(touch marker)'
 
-    def render(command, cwd, env, timeout, log_dir):
+    def render(command, cwd, env, timeout, log_dir, cancel):
         assert f"--prompt={prompt}" in command
         assert env["HF_HUB_OFFLINE"] == "1"
         path = command[command.index("--out") + 1]
@@ -293,3 +396,66 @@ def test_timeout_kills_descendants(tmp_path):
     assert spawned.exists()
     time.sleep(2.2)
     assert not finished.exists()
+
+
+def test_cancel_event_stops_inference(tmp_path):
+    import threading
+    import time
+
+    from agent_audio.process import run_inference
+
+    cancel = threading.Event()
+    threading.Timer(0.3, cancel.set).start()
+    started = time.monotonic()
+    with pytest.raises(RuntimeError, match="cancelled"):
+        run_inference(
+            [sys.executable, "-c", "import time; time.sleep(30)"],
+            tmp_path,
+            runtime.runtime_environment(),
+            30,
+            cancel=cancel,
+        )
+    assert time.monotonic() - started < 5
+
+
+@pytest.mark.parametrize("phase", ["log_cleanup", "wav_validation"])
+def test_late_cancellation_does_not_publish_wav(tmp_path, monkeypatch, phase):
+    from agent_audio import process
+
+    _ready_without_inference(monkeypatch, tmp_path)
+    monkeypatch.setattr(runtime, "run_inference", process.run_inference)
+    child = (
+        "import sys,wave; "
+        "w=wave.open(sys.argv[sys.argv.index('--out')+1], 'wb'); "
+        "w.setparams((1,2,8000,0,'NONE','')); "
+        "w.writeframes(b'\\0\\0'*8000); w.close()"
+    )
+    monkeypatch.setattr(
+        runtime, "_runtime_command", lambda _: ([sys.executable, "-c", child], tmp_path)
+    )
+    cancel = threading.Event()
+    owner, name = (
+        (process, "_remove_log")
+        if phase == "log_cleanup"
+        else (runtime, "_validate_wav")
+    )
+    original = getattr(owner, name)
+
+    def cancel_after(*args):
+        original(*args)
+        cancel.set()
+
+    monkeypatch.setattr(owner, name, cancel_after)
+    monkeypatch.setattr(
+        runtime.os,
+        "link",
+        lambda *args: pytest.fail("Cancelled audio must not reach publication"),
+    )
+    output = tmp_path / "impact.wav"
+    with pytest.raises(RuntimeError, match="cancelled"):
+        runtime.generate_audio("impact", 1, str(output), cancel=cancel)
+    assert cancel.is_set()
+    assert not output.exists()
+    assert not list(tmp_path.glob(".agent-audio-render-*"))
+    assert not (runtime.data_root() / "generation.agent-audio.lock").exists()
+    assert not list((runtime.data_root() / "logs").glob("*.log"))
