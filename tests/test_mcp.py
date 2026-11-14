@@ -401,7 +401,10 @@ def test_mcp_transport_cancellation_joins_runtime_cleanup(
                         await until(stopping.is_set)
                         if cancellation == "notification":
                             await session.send_ping()
-                        assert not psutil.pid_exists(pid)
+                        # Windows job termination can finish descendants after
+                        # the launcher exits. This barrier is the start of log
+                        # cleanup, so wait for exit before releasing cleanup.
+                        await until(lambda: not psutil.pid_exists(pid))
                         assert mcp_server._active_generations
                         assert not server_done.is_set()
                         assert (
